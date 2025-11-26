@@ -1,399 +1,419 @@
-"use client"
+"use client";
 
-import { useState } from 'react';
-import { RoomCard } from '@/components/room/RoomCard';
-import { RoomTable } from '@/components/room/RoomTable';
-import { AddRoomDialog } from '@/components/room/AddRoomDialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Building2, LayoutGrid, Table } from 'lucide-react';
+import { useState } from "react";
+import { RoomCard } from "@/components/room/RoomCard";
+import { RoomTable } from "@/components/room/RoomTable";
+import { AddRoomDialog } from "@/components/room/AddRoomDialog";
+import { TenantsList } from "@/components/tenants/TenantsList";
+import { Sidebar } from "@/components/Sidebar";
+import { Button } from "@/components/ui/button";
+import { LayoutGrid, Table } from "lucide-react";
+import { useRooms } from "@/hooks/useRooms";
+import { useRenters } from "@/hooks/useRenters";
+import { useContracts } from "@/hooks/useContracts";
+import { usePayments } from "@/hooks/usePayments";
+import { RoomWithContract } from "@/types/room.types";
 
 export interface Room {
   id: string;
   roomNumber: string;
   price: number;
-  status: 'occupied' | 'vacant';
+  status: "occupied" | "vacant";
   renter?: {
-    name: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    contactNumber: string;
     rentStartDate: string;
     contractEndDate: string;
     amountPaid: number;
+    contractType?: "monthly" | "yearly" | "custom";
+  };
+}
+
+// Helper function to transform API data to local Room interface
+function transformRoomData(apiRoom: RoomWithContract): Room {
+  return {
+    id: apiRoom.id,
+    roomNumber: apiRoom.room_number,
+    price: apiRoom.base_price,
+    status: apiRoom.status as "occupied" | "vacant",
+    renter: apiRoom.current_contract
+      ? {
+          firstName:
+            apiRoom.current_contract.renter?.name?.split(" ")[0] || "Unknown",
+          lastName:
+            apiRoom.current_contract.renter?.name
+              ?.split(" ")
+              .slice(1)
+              .join(" ") || "",
+          email: apiRoom.current_contract.renter?.email || "",
+          contactNumber: apiRoom.current_contract.renter?.phone || "",
+          rentStartDate: apiRoom.current_contract.start_date,
+          contractEndDate: apiRoom.current_contract.end_date,
+          amountPaid: apiRoom.current_contract.total_paid || 0,
+          contractType: "monthly",
+        }
+      : undefined,
   };
 }
 
 export default function App() {
-  const [rooms, setRooms] = useState<Room[]>([
-    // {
-    //   id: '1',
-    //   roomNumber: '101',
-    //   price: 2500,
-    //   status: 'occupied',
-    //   renter: {
-    //     name: 'John Smith',
-    //     rentStartDate: '2024-01-15',
-    //     contractEndDate: '2025-01-15',
-    //     amountPaid: 2500,
-    //   },
-    // },
-    // {
-    //   id: '2',
-    //   roomNumber: '102',
-    //   price: 2500,
-    //   status: 'occupied',
-    //   renter: {
-    //     name: 'Sarah Johnson',
-    //     rentStartDate: '2024-03-01',
-    //     contractEndDate: '2025-03-01',
-    //     amountPaid: 1500,
-    //   },
-    // },
-    // {
-    //   id: '3',
-    //   roomNumber: '103',
-    //   price: 3000,
-    //   status: 'occupied',
-    //   renter: {
-    //     name: 'Michael Brown',
-    //     rentStartDate: '2023-11-01',
-    //     contractEndDate: '2024-11-01',
-    //     amountPaid: 3000,
-    //   },
-    // },
-    // {
-    //   id: '4',
-    //   roomNumber: '104',
-    //   price: 2500,
-    //   status: 'vacant',
-    // },
-    // {
-    //   id: '5',
-    //   roomNumber: '105',
-    //   price: 2800,
-    //   status: 'vacant',
-    // },
-    // {
-    //   id: '6',
-    //   roomNumber: '106',
-    //   price: 2500,
-    //   status: 'occupied',
-    //   renter: {
-    //     name: 'Emily Davis',
-    //     rentStartDate: '2024-09-01',
-    //     contractEndDate: '2025-09-01',
-    //     amountPaid: 2500,
-    //   },
-    // },
-  ]);
+  const {
+    rooms: apiRooms,
+    loading,
+    error,
+    fetchRooms,
+    createRoom,
+  } = useRooms({
+    includeContract: true,
+    autoFetch: true,
+  });
 
-  const [allRoomsView, setAllRoomsView] = useState<'card' | 'table'>('card');
-  const [occupiedView, setOccupiedView] = useState<'card' | 'table'>('card');
-  const [vacantView, setVacantView] = useState<'card' | 'table'>('card');
-  const [paidView, setPaidView] = useState<'card' | 'table'>('card');
-  const [unpaidView, setUnpaidView] = useState<'card' | 'table'>('card');
+  const { createRenter, updateRenter: updateRenterAPI } = useRenters({
+    autoFetch: false,
+  });
+  const { createContract, updateContract } = useContracts({ autoFetch: false });
+  const { createPayment } = usePayments({ autoFetch: false });
 
-  // --- ROOM MANAGEMENT FUNCTIONS ---
+  // Transform API rooms to local Room interface
+  const rooms: Room[] = apiRooms.map(transformRoomData);
 
-  const addRoom = (newRoom: { roomNumber: string; price: number }) => {
-    const room: Room = {
-      id: Date.now().toString(),
-      roomNumber: newRoom.roomNumber,
-      price: newRoom.price,
-      status: 'vacant',
+  const [selectedView, setSelectedView] = useState("all-rooms");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  const addRoom = async (newRoom: { roomNumber: string; price: number }) => {
+    await createRoom({
+      room_number: newRoom.roomNumber,
+      base_price: newRoom.price,
+      status: "vacant",
+    });
+  };
+
+  const updateRoomPayment = async (roomId: string, paymentAmount: number) => {
+    try {
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room?.current_contract) {
+        console.error("No active contract found");
+        return;
+      }
+
+      // paymentAmount should be the incremental amount to add, not the total
+      await createPayment({
+        contract_id: room.current_contract.id,
+        amount: paymentAmount,
+        payment_date: new Date().toISOString().split("T")[0],
+        payment_method: "cash",
+      });
+
+      fetchRooms();
+    } catch (err) {
+      console.error("Error updating payment:", err);
+    }
+  };
+
+  const renewContract = async (roomId: string, newEndDate: string) => {
+    try {
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room?.current_contract) {
+        console.error("No active contract found");
+        return;
+      }
+
+      await updateContract(room.current_contract.id, {
+        end_date: newEndDate,
+      });
+
+      fetchRooms();
+    } catch (err) {
+      console.error("Error renewing contract:", err);
+    }
+  };
+
+  const vacateRoom = async (roomId: string) => {
+    try {
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room?.current_contract) {
+        console.error("No active contract found");
+        return;
+      }
+
+      await updateContract(room.current_contract.id, {
+        status: "terminated",
+      });
+
+      fetchRooms();
+    } catch (err) {
+      console.error("Error vacating room:", err);
+    }
+  };
+
+  const occupyRoom = async (
+    roomId: string,
+    renterDetails: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      contactNumber: string;
+      rentStartDate: string;
+      contractEndDate: string;
+      amountPaid: number;
+      contractType?: "monthly" | "yearly" | "custom";
+    }
+  ) => {
+    try {
+      const renter = await createRenter({
+        name: `${renterDetails.firstName} ${renterDetails.lastName}`,
+        phone: renterDetails.contactNumber,
+        email: renterDetails.email,
+      });
+
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room) return;
+
+      const contract = await createContract({
+        room_id: roomId,
+        renter_id: renter.id,
+        start_date: renterDetails.rentStartDate,
+        end_date: renterDetails.contractEndDate,
+        monthly_rent: room.base_price,
+        status: "active",
+      });
+
+      if (renterDetails.amountPaid > 0) {
+        await createPayment({
+          contract_id: contract.id,
+          amount: renterDetails.amountPaid,
+          payment_date: renterDetails.rentStartDate,
+          payment_method: "cash",
+        });
+      }
+
+      fetchRooms();
+    } catch (err) {
+      console.error("Error occupying room:", err);
+    }
+  };
+
+  const updateRenter = async (
+    roomId: string,
+    renterDetails: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      contactNumber: string;
+    }
+  ) => {
+    try {
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room?.current_contract?.renter?.id) {
+        console.error("No renter found for this room");
+        return;
+      }
+
+      await updateRenterAPI(room.current_contract.renter.id, {
+        name: `${renterDetails.firstName} ${renterDetails.lastName}`,
+        phone: renterDetails.contactNumber,
+        email: renterDetails.email,
+      });
+
+      fetchRooms();
+    } catch (err) {
+      console.error("Error updating renter:", err);
+    }
+  };
+
+  // Filter functions
+  const getFilteredRooms = () => {
+    switch (selectedView) {
+      case "all-rooms":
+        return rooms;
+      case "vacant":
+        return rooms.filter((room) => room.status === "vacant");
+      case "occupied":
+        return rooms.filter((room) => room.status === "occupied");
+      default:
+        return rooms;
+    }
+  };
+
+  const getFilteredTenants = () => {
+    const occupiedRooms = rooms.filter((room) => room.status === "occupied");
+
+    switch (selectedView) {
+      case "all-tenants":
+        return occupiedRooms;
+      case "fully-paid":
+        return occupiedRooms.filter(
+          (room) => room.renter && room.renter.amountPaid >= room.price
+        );
+      case "not-fully-paid":
+        return occupiedRooms.filter(
+          (room) => room.renter && room.renter.amountPaid < room.price
+        );
+      default:
+        return occupiedRooms;
+    }
+  };
+
+  // Determine if current view is tenant-based or room-based
+  const isTenantView = ["all-tenants", "fully-paid", "not-fully-paid"].includes(
+    selectedView
+  );
+  const isRoomView = ["all-rooms", "vacant", "occupied"].includes(selectedView);
+
+  // Get title based on selected view
+  const getViewTitle = () => {
+    const titles: Record<string, string> = {
+      "all-tenants": "All Tenants",
+      "fully-paid": "Fully Paid Tenants",
+      "not-fully-paid": "Not Fully Paid Tenants",
+      "all-rooms": "All Rooms",
+      vacant: "Vacant Rooms",
+      occupied: "Occupied Rooms",
     };
-    setRooms([...rooms, room]);
+    return titles[selectedView] || "Property Management";
   };
 
-  const updateRoomPayment = (roomId: string, amountPaid: number) => {
-    setRooms(rooms.map(room => 
-      room.id === roomId && room.renter
-        ? { ...room, renter: { ...room.renter, amountPaid } }
-        : room
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-slate-50">
+        <Sidebar
+          selectedView={selectedView}
+          onViewChange={setSelectedView}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+        <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading rooms...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  const renewContract = (roomId: string, newEndDate: string) => {
-    setRooms(rooms.map(room => 
-      room.id === roomId && room.renter
-        ? { ...room, renter: { ...room.renter, contractEndDate: newEndDate } }
-        : room
-    ));
-  };
-
-  const vacateRoom = (roomId: string) => {
-    setRooms(rooms.map(room => 
-      room.id === roomId
-        ? { ...room, status: 'vacant' as const, renter: undefined }
-        : room
-    ));
-  };
-
-  const occupyRoom = (roomId: string, renterDetails: {
-    name: string;
-    rentStartDate: string;
-    contractEndDate: string;
-    amountPaid: number;
-  }) => {
-    setRooms(rooms.map(room => 
-      room.id === roomId
-        ? { ...room, status: 'occupied' as const, renter: renterDetails }
-        : room
-    ));
-  };
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-slate-50">
+        <Sidebar
+          selectedView={selectedView}
+          onViewChange={setSelectedView}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+        <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
+          <div className="text-center text-red-600">
+            <p className="text-xl mb-2">Error loading rooms</p>
+            <p className="text-sm">{error}</p>
+            <Button onClick={() => fetchRooms()} className="mt-4">
+              Try Again
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-10 h-10 text-slate-700" />
-            <h1 className="text-slate-900">Property Management System</h1>
+    <div className="flex min-h-screen bg-slate-50">
+      <Sidebar
+        selectedView={selectedView}
+        onViewChange={setSelectedView}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
+
+      <main className="flex-1 p-8 md:ml-0">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-8 mt-12 md:mt-0">
+            <div>
+              <h2 className="text-slate-900 text-2xl">{getViewTitle()}</h2>
+            </div>
+            <AddRoomDialog onAddRoom={addRoom} existingRooms={rooms} />
           </div>
-          <AddRoomDialog onAddRoom={addRoom} />
+
+          {/* Tenant Views */}
+          {isTenantView && (
+            <div className="space-y-4">
+              <TenantsList
+                rooms={getFilteredTenants()}
+                onUpdateRenter={updateRenter}
+              />
+            </div>
+          )}
+
+          {/* Room Views */}
+          {isRoomView && (
+            <div className="space-y-4">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant={viewMode === "card" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("card")}
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Card View
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                >
+                  <Table className="w-4 h-4 mr-2" />
+                  Table View
+                </Button>
+              </div>
+
+              {getFilteredRooms().length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-lg shadow">
+                  <div className="w-16 h-16 mx-auto mb-4 text-slate-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-slate-600">No rooms found</p>
+                </div>
+              ) : viewMode === "card" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getFilteredRooms().map((room) => (
+                    <RoomCard
+                      key={room.id}
+                      room={room}
+                      onUpdatePayment={updateRoomPayment}
+                      onRenewContract={renewContract}
+                      onVacateRoom={vacateRoom}
+                      onOccupyRoom={occupyRoom}
+                      onUpdateRenter={updateRenter}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <RoomTable
+                  rooms={getFilteredRooms()}
+                  onUpdatePayment={updateRoomPayment}
+                  onRenewContract={renewContract}
+                  onVacateRoom={vacateRoom}
+                  onOccupyRoom={occupyRoom}
+                  onUpdateRenter={updateRenter}
+                />
+              )}
+            </div>
+          )}
         </div>
-
-        <Tabs defaultValue="all">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all">All Rooms</TabsTrigger>
-            <TabsTrigger value="occupied">Occupied</TabsTrigger>
-            <TabsTrigger value="vacant">Vacant</TabsTrigger>
-            <TabsTrigger value="paid">Fully Paid</TabsTrigger>
-            <TabsTrigger value="unpaid">Not Fully Paid</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all" className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant={allRoomsView === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAllRoomsView('card')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Card View
-              </Button>
-              <Button
-                variant={allRoomsView === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAllRoomsView('table')}
-              >
-                <Table className="w-4 h-4 mr-2" />
-                Table View
-              </Button>
-            </div>
-            
-            {rooms.length === 0 ? (
-                <div className="text-center p-10 border border-dashed rounded-lg bg-white text-gray-500">
-                    No rooms have been added yet. Use the Add Room button to get started!
-                </div>
-            ) : allRoomsView === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.map(room => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    onUpdatePayment={updateRoomPayment}
-                    onRenewContract={renewContract}
-                    onVacateRoom={vacateRoom}
-                    onOccupyRoom={occupyRoom}
-                  />
-                ))}
-              </div>
-            ) : (
-              <RoomTable
-                rooms={rooms}
-                onUpdatePayment={updateRoomPayment}
-                onRenewContract={renewContract}
-                onVacateRoom={vacateRoom}
-                onOccupyRoom={occupyRoom}
-              />
-            )}
-          </TabsContent>
-
-{/* occupied tab */}
-          <TabsContent value="occupied" className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant={occupiedView === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setOccupiedView('card')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Card View
-              </Button>
-              <Button
-                variant={occupiedView === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setOccupiedView('table')}
-              >
-                <Table className="w-4 h-4 mr-2" />
-                Table View
-              </Button>
-            </div>
-            
-            {rooms.filter(room => room.status === 'occupied').length === 0 ? (
-                <div className="text-center p-10 border border-dashed rounded-lg bg-white text-gray-500">
-                    No rooms are currently occupied.
-                </div>
-            ) : occupiedView === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.filter(room => room.status === 'occupied').map(room => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    onUpdatePayment={updateRoomPayment}
-                    onRenewContract={renewContract}
-                    onVacateRoom={vacateRoom}
-                    onOccupyRoom={occupyRoom}
-                  />
-                ))}
-              </div>
-            ) : (
-              <RoomTable
-                rooms={rooms.filter(room => room.status === 'occupied')}
-                onUpdatePayment={updateRoomPayment}
-                onRenewContract={renewContract}
-                onVacateRoom={vacateRoom}
-                onOccupyRoom={occupyRoom}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="vacant" className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant={vacantView === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setVacantView('card')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Card View
-              </Button>
-              <Button
-                variant={vacantView === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setVacantView('table')}
-              >
-                <Table className="w-4 h-4 mr-2" />
-                Table View
-              </Button>
-            </div>
-            
-            {rooms.filter(room => room.status === 'vacant').length === 0 ? (
-                <div className="text-center p-10 border border-dashed rounded-lg bg-white text-gray-500">
-                    All rooms are currently occupied!
-                </div>
-            ) : vacantView === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.filter(room => room.status === 'vacant').map(room => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    onUpdatePayment={updateRoomPayment}
-                    onRenewContract={renewContract}
-                    onVacateRoom={vacateRoom}
-                    onOccupyRoom={occupyRoom}
-                  />
-                ))}
-              </div>
-            ) : (
-              <RoomTable
-                rooms={rooms.filter(room => room.status === 'vacant')}
-                onUpdatePayment={updateRoomPayment}
-                onRenewContract={renewContract}
-                onVacateRoom={vacateRoom}
-                onOccupyRoom={occupyRoom}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="paid" className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant={paidView === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPaidView('card')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Card View
-              </Button>
-              <Button
-                variant={paidView === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPaidView('table')}
-              >
-                <Table className="w-4 h-4 mr-2" />
-                Table View
-              </Button>
-            </div>
-            
-            {paidView === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.filter(room => room.status === 'occupied' && room.renter && room.renter.amountPaid >= room.price).map(room => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    onUpdatePayment={updateRoomPayment}
-                    onRenewContract={renewContract}
-                    onVacateRoom={vacateRoom}
-                    onOccupyRoom={occupyRoom}
-                  />
-                ))}
-              </div>
-            ) : (
-              <RoomTable
-                rooms={rooms.filter(room => room.status === 'occupied' && room.renter && room.renter.amountPaid >= room.price)}
-                onUpdatePayment={updateRoomPayment}
-                onRenewContract={renewContract}
-                onVacateRoom={vacateRoom}
-                onOccupyRoom={occupyRoom}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="unpaid" className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant={unpaidView === 'card' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setUnpaidView('card')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Card View
-              </Button>
-              <Button
-                variant={unpaidView === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setUnpaidView('table')}
-              >
-                <Table className="w-4 h-4 mr-2" />
-                Table View
-              </Button>
-            </div>
-            
-            {unpaidView === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.filter(room => room.status === 'occupied' && room.renter && room.renter.amountPaid < room.price).map(room => (
-                  <RoomCard
-                    key={room.id}
-                    room={room}
-                    onUpdatePayment={updateRoomPayment}
-                    onRenewContract={renewContract}
-                    onVacateRoom={vacateRoom}
-                    onOccupyRoom={occupyRoom}
-                  />
-                ))}
-              </div>
-            ) : (
-              <RoomTable
-                rooms={rooms.filter(room => room.status === 'occupied' && room.renter && room.renter.amountPaid < room.price)}
-                onUpdatePayment={updateRoomPayment}
-                onRenewContract={renewContract}
-                onVacateRoom={vacateRoom}
-                onOccupyRoom={occupyRoom}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+      </main>
     </div>
   );
 }
