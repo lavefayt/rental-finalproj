@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DoorOpen, AlertCircle, User, DollarSign, Edit } from "lucide-react";
+import { DoorOpen, AlertCircle, User, DollarSign, Edit, X } from "lucide-react";
 import { Room } from "../App";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { truncateName } from "@/utils/textUtils";
@@ -59,6 +59,7 @@ interface RoomCardProps {
       contactNumber: string;
     }
   ) => void;
+  onDeleteRoom: (roomId: string) => void;
 }
 
 // Validation Schemas
@@ -72,10 +73,13 @@ const newTenantSchema = z.object({
   contractEndDate: z.string().min(1, "End date is required"),
   amountPaid: z
     .string()
-    .min(1, "Amount is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-      message: "Amount must be a valid number",
-    }),
+    .refine(
+      (val) => val === "" || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
+      {
+        message: "Amount must be a valid number",
+      }
+    )
+    .transform((val) => (val === "" ? "0" : val)),
 });
 
 const editRenterSchema = z.object({
@@ -112,17 +116,28 @@ export function RoomCard({
   onVacateRoom,
   onOccupyRoom,
   onUpdateRenter,
+  onDeleteRoom,
 }: RoomCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditingRenter, setIsEditingRenter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get today's date and calculate default end date for monthly contract
+  const today = new Date().toISOString().split("T")[0];
+  const defaultEndDate = (() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().split("T")[0];
+  })();
 
   // New Tenant Form
   const newTenantForm = useForm<NewTenantFormData>({
     resolver: zodResolver(newTenantSchema),
     defaultValues: {
       contractType: "monthly",
-      amountPaid: "0",
+      amountPaid: "",
+      rentStartDate: today,
+      contractEndDate: defaultEndDate,
     },
   });
 
@@ -192,26 +207,29 @@ export function RoomCard({
 
   const handleMarkFullyPaid = () => {
     if (!room.renter) return;
-    
+
     const currentPaid = room.renter.amountPaid;
     const remainingBalance = room.price - currentPaid;
-    
+
     // If already fully paid or overpaid, do nothing
     if (remainingBalance <= 0) return;
-    
+
     // Calculate interest only on the remaining balance if contract is expired
-    const interestOnBalance = isContractExpired && isPastDue 
-      ? Math.round(remainingBalance * 0.1) 
-      : 0;
-    
+    const interestOnBalance =
+      isContractExpired && isPastDue ? Math.round(remainingBalance * 0.1) : 0;
+
     const paymentAmount = remainingBalance + interestOnBalance;
-    
+
     setConfirmDialog({
       open: true,
       title: "Mark as Fully Paid?",
       description: `Are you sure you want to mark Room ${
         room.roomNumber
-      } as fully paid? This will add a payment of ₱${paymentAmount.toLocaleString()}${interestOnBalance > 0 ? ` (including ₱${interestOnBalance.toLocaleString()} interest)` : ''}.`,
+      } as fully paid? This will add a payment of ₱${paymentAmount.toLocaleString()}${
+        interestOnBalance > 0
+          ? ` (including ₱${interestOnBalance.toLocaleString()} interest)`
+          : ""
+      }.`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -335,17 +353,40 @@ export function RoomCard({
     });
   });
 
+  const handleDeleteRoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDialog({
+      open: true,
+      title: "Delete Room?",
+      description: `Are you sure you want to delete Room ${room.roomNumber}? This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        setIsLoading(true);
+        await onDeleteRoom(room.id);
+        setIsLoading(false);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
   return (
     <>
       <Card
-        className={`cursor-pointer transition-all hover:shadow-lg ${
+        className={`relative cursor-pointer transition-all hover:shadow-lg ${
           isContractExpired ? "border-red-400 border-2" : ""
         } ${
           isPastDue && !isContractExpired ? "border-orange-400 border-2" : ""
         }`}
         onClick={() => setIsOpen(true)}
       >
-        <CardHeader>
+        <button
+          onClick={handleDeleteRoom}
+          className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors z-10"
+          aria-label="Delete room"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <CardHeader className="pt-8">
           <CardTitle className="flex items-center justify-between">
             <span>Room {room.roomNumber}</span>
             {room.status === "vacant" ? (
@@ -382,17 +423,20 @@ export function RoomCard({
         </CardContent>
       </Card>
 
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) {
-          // Reset all forms when dialog closes
-          newTenantForm.reset();
-          editRenterForm.reset();
-          paymentForm.reset();
-          renewalForm.reset();
-          setIsEditingRenter(false);
-        }
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) {
+            // Reset all forms when dialog closes
+            newTenantForm.reset();
+            editRenterForm.reset();
+            paymentForm.reset();
+            renewalForm.reset();
+            setIsEditingRenter(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-3xl">
@@ -581,12 +625,16 @@ export function RoomCard({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="amountPaid">Amount Paid</Label>
+                  <Label htmlFor="amountPaid">Initial Payment (Optional)</Label>
                   <Input
                     id="amountPaid"
                     type="number"
-                    placeholder="Enter amount paid"
+                    min="0"
+                    step="any"
+                    placeholder="0"
+                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     aria-invalid={!!newTenantForm.formState.errors.amountPaid}
+                    onFocus={(e) => e.target.select()}
                     {...newTenantForm.register("amountPaid")}
                   />
                   {newTenantForm.formState.errors.amountPaid && (
@@ -892,11 +940,14 @@ export function RoomCard({
                             <Input
                               id="payment"
                               type="number"
+                              min="0"
+                              step="any"
                               placeholder="Enter amount"
-                              className="mt-1"
+                              className="mt-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               aria-invalid={
                                 !!paymentForm.formState.errors.amount
                               }
+                              onFocus={(e) => e.target.select()}
                               {...paymentForm.register("amount")}
                             />
                             {paymentForm.formState.errors.amount && (

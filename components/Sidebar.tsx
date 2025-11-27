@@ -13,14 +13,19 @@ import {
   X,
   ChevronLeft,
   Building2,
+  DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 
 interface SidebarProps {
   selectedView: string;
   onViewChange: (view: string) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  paymentsCount?: number;
+  dueCount?: number;
 }
 
 interface NavItem {
@@ -28,6 +33,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   children?: NavItem[];
+  badge?: number;
 }
 
 export function Sidebar({
@@ -35,10 +41,13 @@ export function Sidebar({
   onViewChange,
   isCollapsed,
   onToggleCollapse,
+  paymentsCount = 0,
+  dueCount = 0,
 }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "tenants",
     "rooms",
+    "payments-section",
   ]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -84,6 +93,25 @@ export function Sidebar({
           id: "not-fully-paid",
           label: "Not Fully Paid",
           icon: <XCircle className="w-4 h-4" />,
+        },
+      ],
+    },
+    {
+      id: "payments-section",
+      label: "Payments",
+      icon: <DollarSign className="w-5 h-5" />,
+      children: [
+        {
+          id: "payments",
+          label: "All Payments",
+          icon: <DollarSign className="w-4 h-4" />,
+          badge: paymentsCount > 0 ? paymentsCount : undefined,
+        },
+        {
+          id: "due",
+          label: "Due",
+          icon: <AlertTriangle className="w-4 h-4" />,
+          badge: dueCount > 0 ? dueCount : undefined,
         },
       ],
     },
@@ -155,52 +183,94 @@ export function Sidebar({
       <nav className="flex-1 overflow-y-auto p-4 space-y-2">
         {navItems.map((item) => (
           <div key={item.id}>
-            <button
-              onClick={() => toggleSection(item.id)}
-              className={`w-full flex items-center ${
-                isCollapsed ? "justify-center" : "justify-between"
-              } p-2 rounded-lg hover:bg-slate-100 transition-colors`}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <div
-                className={`flex items-center ${
-                  isCollapsed ? "" : "gap-2"
-                } text-slate-700`}
-              >
-                {item.icon}
-                {!isCollapsed && <span>{item.label}</span>}
-              </div>
-              {!isCollapsed && (
-                <>
-                  {expandedSections.includes(item.id) ? (
-                    <ChevronDown className="w-4 h-4 text-slate-500" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-500" />
+            {/* Items with children (collapsible sections) */}
+            {item.children ? (
+              <>
+                <button
+                  onClick={() => toggleSection(item.id)}
+                  className={`w-full flex items-center ${
+                    isCollapsed ? "justify-center" : "justify-between"
+                  } p-2 rounded-lg hover:bg-slate-100 transition-colors`}
+                  title={isCollapsed ? item.label : undefined}
+                >
+                  <div
+                    className={`flex items-center ${
+                      isCollapsed ? "" : "gap-2"
+                    } text-slate-700`}
+                  >
+                    {item.icon}
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </div>
+                  {!isCollapsed && (
+                    <>
+                      {expandedSections.includes(item.id) ? (
+                        <ChevronDown className="w-4 h-4 text-slate-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-500" />
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </button>
+                </button>
 
-            {!isCollapsed &&
-              expandedSections.includes(item.id) &&
-              item.children && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {item.children.map((child) => (
-                    <button
-                      key={child.id}
-                      onClick={() => handleItemClick(child.id)}
-                      className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                        selectedView === child.id
-                          ? "bg-blue-100 text-blue-700"
-                          : "text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      {child.icon}
-                      <span className="text-sm">{child.label}</span>
-                    </button>
-                  ))}
+                {!isCollapsed &&
+                  expandedSections.includes(item.id) &&
+                  item.children && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {item.children.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleItemClick(child.id)}
+                          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+                            selectedView === child.id
+                              ? "bg-blue-100 text-blue-700"
+                              : "text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {child.icon}
+                            <span className="text-sm">{child.label}</span>
+                          </div>
+                          {child.badge !== undefined && (
+                            <Badge
+                              variant={
+                                child.id === "due" ? "destructive" : "secondary"
+                              }
+                              className="text-xs"
+                            >
+                              {child.badge}
+                            </Badge>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </>
+            ) : (
+              /* Items without children (direct links like Payments) */
+              <button
+                onClick={() => handleItemClick(item.id)}
+                className={`w-full flex items-center ${
+                  isCollapsed ? "justify-center" : "justify-between"
+                } p-2 rounded-lg transition-colors ${
+                  selectedView === item.id
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+                title={isCollapsed ? item.label : undefined}
+              >
+                <div
+                  className={`flex items-center ${isCollapsed ? "" : "gap-2"}`}
+                >
+                  {item.icon}
+                  {!isCollapsed && <span>{item.label}</span>}
                 </div>
-              )}
+                {!isCollapsed && item.badge !== undefined && (
+                  <Badge variant="secondary" className="text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </button>
+            )}
           </div>
         ))}
       </nav>

@@ -30,7 +30,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DoorOpen, User, DollarSign, Edit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  DoorOpen,
+  User,
+  DollarSign,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Eye,
+} from "lucide-react";
 import { Room } from "../App";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { truncateName } from "@/utils/textUtils";
@@ -66,6 +80,7 @@ interface RoomTableProps {
       contactNumber: string;
     }
   ) => void;
+  onDeleteRoom: (roomId: string) => void;
 }
 
 // Validation Schemas
@@ -79,10 +94,13 @@ const newTenantSchema = z.object({
   contractEndDate: z.string().min(1, "End date is required"),
   amountPaid: z
     .string()
-    .min(1, "Amount is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-      message: "Amount must be a valid number",
-    }),
+    .refine(
+      (val) => val === "" || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
+      {
+        message: "Amount must be a valid number",
+      }
+    )
+    .transform((val) => (val === "" ? "0" : val)),
 });
 
 const editRenterSchema = z.object({
@@ -119,17 +137,28 @@ export function RoomTable({
   onVacateRoom,
   onOccupyRoom,
   onUpdateRenter,
+  onDeleteRoom,
 }: RoomTableProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isEditingRenter, setIsEditingRenter] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get today's date and calculate default end date for monthly contract
+  const today = new Date().toISOString().split("T")[0];
+  const defaultEndDate = (() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().split("T")[0];
+  })();
 
   // New Tenant Form
   const newTenantForm = useForm<NewTenantFormData>({
     resolver: zodResolver(newTenantSchema),
     defaultValues: {
       contractType: "monthly",
-      amountPaid: "0",
+      amountPaid: "",
+      rentStartDate: today,
+      contractEndDate: defaultEndDate,
     },
   });
 
@@ -202,15 +231,16 @@ export function RoomTable({
 
     const currentPaid = selectedRoom.renter.amountPaid;
     const remainingBalance = selectedRoom.price - currentPaid;
-    
+
     // If already fully paid or overpaid, do nothing
     if (remainingBalance <= 0) return;
-    
+
     // Calculate interest only on the remaining balance if contract is expired
-    const interestOnBalance = isContractExpired(selectedRoom) && isPastDue(selectedRoom)
-      ? Math.round(remainingBalance * 0.1)
-      : 0;
-    
+    const interestOnBalance =
+      isContractExpired(selectedRoom) && isPastDue(selectedRoom)
+        ? Math.round(remainingBalance * 0.1)
+        : 0;
+
     const paymentAmount = remainingBalance + interestOnBalance;
 
     setConfirmDialog({
@@ -218,7 +248,11 @@ export function RoomTable({
       title: "Mark as Fully Paid?",
       description: `Are you sure you want to mark Room ${
         selectedRoom.roomNumber
-      } as fully paid? This will add a payment of ₱${paymentAmount.toLocaleString()}${interestOnBalance > 0 ? ` (including ₱${interestOnBalance.toLocaleString()} interest)` : ''}.`,
+      } as fully paid? This will add a payment of ₱${paymentAmount.toLocaleString()}${
+        interestOnBalance > 0
+          ? ` (including ₱${interestOnBalance.toLocaleString()} interest)`
+          : ""
+      }.`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -362,6 +396,21 @@ export function RoomTable({
     renewalForm.reset();
   };
 
+  const handleDeleteRoom = (room: Room) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Room?",
+      description: `Are you sure you want to delete Room ${room.roomNumber}? This action cannot be undone.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        setIsLoading(true);
+        await onDeleteRoom(room.id);
+        setIsLoading(false);
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
   return (
     <>
       <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -456,13 +505,30 @@ export function RoomTable({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      onClick={() => setSelectedRoom(room)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      View Details
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteRoom(room)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Room
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );
@@ -671,7 +737,11 @@ export function RoomTable({
                     <Input
                       id="amountPaid"
                       type="number"
+                      min="0"
+                      step="any"
                       placeholder="Enter amount paid"
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      onFocus={(e) => e.target.select()}
                       aria-invalid={!!newTenantForm.formState.errors.amountPaid}
                       {...newTenantForm.register("amountPaid")}
                     />
@@ -1007,8 +1077,11 @@ export function RoomTable({
                               <Input
                                 id="payment"
                                 type="number"
+                                min="0"
+                                step="any"
                                 placeholder="Enter amount"
-                                className="mt-1"
+                                className="mt-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                onFocus={(e) => e.target.select()}
                                 aria-invalid={
                                   !!paymentForm.formState.errors.amount
                                 }

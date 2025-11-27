@@ -19,7 +19,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { User, DollarSign, Mail, Phone, Edit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  User,
+  DollarSign,
+  Mail,
+  Phone,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  Eye,
+} from "lucide-react";
 import { EditRenterForm } from "./EditRenterForm";
 import { truncateName } from "@/utils/textUtils";
 import { ConfirmDialog } from "../ConfirmDialog";
@@ -35,11 +50,17 @@ interface TenantsListProps {
       contactNumber: string;
     }
   ) => void;
+  onVacateRoom: (roomId: string) => void;
 }
 
-export function TenantsList({ rooms, onUpdateRenter }: TenantsListProps) {
+export function TenantsList({
+  rooms,
+  onUpdateRenter,
+  onVacateRoom,
+}: TenantsListProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -103,6 +124,40 @@ export function TenantsList({ rooms, onUpdateRenter }: TenantsListProps) {
         },
       });
     }
+  };
+
+  const handleDeleteTenant = (room: Room) => {
+    if (!room.renter) return;
+
+    const hasUnpaidBalance = room.renter.amountPaid < room.price;
+
+    if (hasUnpaidBalance) {
+      const remainingBalance = room.price - room.renter.amountPaid;
+      setConfirmDialog({
+        open: true,
+        title: "Cannot Remove Tenant",
+        description: `${room.renter.firstName} ${
+          room.renter.lastName
+        } still has an unpaid balance of ₱${remainingBalance.toLocaleString()}. Please ensure full payment before removing the tenant.`,
+        onConfirm: () => {
+          setConfirmDialog({ ...confirmDialog, open: false });
+        },
+      });
+      return;
+    }
+
+    setConfirmDialog({
+      open: true,
+      title: "Remove Tenant?",
+      description: `Are you sure you want to remove ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? This will vacate the room and terminate the contract.`,
+      onConfirm: async () => {
+        setIsLoading(true);
+        await onVacateRoom(room.id);
+        setIsLoading(false);
+        setConfirmDialog({ ...confirmDialog, open: false });
+        handleCloseDialog();
+      },
+    });
   };
 
   const handleCloseDialog = () => {
@@ -183,13 +238,32 @@ export function TenantsList({ rooms, onUpdateRenter }: TenantsListProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      onClick={() => setSelectedRoom(room)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      View Details
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteTenant(room)}
+                          className={
+                            pastDue ? "text-slate-400" : "text-red-600"
+                          }
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {pastDue ? "Has Unpaid Balance" : "Remove Tenant"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

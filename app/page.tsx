@@ -5,6 +5,8 @@ import { RoomCard } from "@/components/room/RoomCard";
 import { RoomTable } from "@/components/room/RoomTable";
 import { AddRoomDialog } from "@/components/room/AddRoomDialog";
 import { TenantsList } from "@/components/tenants/TenantsList";
+import { PaymentsList } from "@/components/PaymentsList";
+import { DueList } from "@/components/DueList";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Table } from "lucide-react";
@@ -65,6 +67,7 @@ export default function App() {
     error,
     fetchRooms,
     createRoom,
+    deleteRoom,
   } = useRooms({
     includeContract: true,
     autoFetch: true,
@@ -73,8 +76,16 @@ export default function App() {
   const { createRenter, updateRenter: updateRenterAPI } = useRenters({
     autoFetch: false,
   });
+  const { contracts: dueContracts, fetchContracts: fetchDueContracts } =
+    useContracts({
+      status: "active",
+      paymentStatus: "unpaid",
+      autoFetch: true,
+    });
   const { createContract, updateContract } = useContracts({ autoFetch: false });
-  const { createPayment } = usePayments({ autoFetch: false });
+  const { payments, fetchPayments, createPayment } = usePayments({
+    autoFetch: true,
+  });
 
   // Transform API rooms to local Room interface
   const rooms: Room[] = apiRooms.map(transformRoomData);
@@ -107,7 +118,10 @@ export default function App() {
         payment_method: "cash",
       });
 
+      // Refresh all data
       fetchRooms();
+      fetchPayments();
+      fetchDueContracts();
     } catch (err) {
       console.error("Error updating payment:", err);
     }
@@ -224,6 +238,15 @@ export default function App() {
     }
   };
 
+  const handleDeleteRoom = async (roomId: string) => {
+    try {
+      await deleteRoom(roomId);
+      fetchRooms();
+    } catch (err) {
+      console.error("Error deleting room:", err);
+    }
+  };
+
   // Filter functions
   const getFilteredRooms = () => {
     switch (selectedView) {
@@ -262,6 +285,8 @@ export default function App() {
     selectedView
   );
   const isRoomView = ["all-rooms", "vacant", "occupied"].includes(selectedView);
+  const isPaymentsView = selectedView === "payments";
+  const isDueView = selectedView === "due";
 
   // Get title based on selected view
   const getViewTitle = () => {
@@ -272,6 +297,8 @@ export default function App() {
       "all-rooms": "All Rooms",
       vacant: "Vacant Rooms",
       occupied: "Occupied Rooms",
+      payments: "Payment History",
+      due: "Due Payments",
     };
     return titles[selectedView] || "Property Management";
   };
@@ -284,6 +311,8 @@ export default function App() {
           onViewChange={setSelectedView}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          paymentsCount={payments.length}
+          dueCount={dueContracts.length}
         />
         <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
           <div className="text-center">
@@ -303,6 +332,8 @@ export default function App() {
           onViewChange={setSelectedView}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          paymentsCount={payments.length}
+          dueCount={dueContracts.length}
         />
         <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
           <div className="text-center text-red-600">
@@ -324,6 +355,8 @@ export default function App() {
         onViewChange={setSelectedView}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        paymentsCount={payments.length}
+        dueCount={dueContracts.length}
       />
 
       <main className="flex-1 p-8 md:ml-0">
@@ -341,6 +374,7 @@ export default function App() {
               <TenantsList
                 rooms={getFilteredTenants()}
                 onUpdateRenter={updateRenter}
+                onVacateRoom={vacateRoom}
               />
             </div>
           )}
@@ -397,6 +431,7 @@ export default function App() {
                       onVacateRoom={vacateRoom}
                       onOccupyRoom={occupyRoom}
                       onUpdateRenter={updateRenter}
+                      onDeleteRoom={handleDeleteRoom}
                     />
                   ))}
                 </div>
@@ -408,8 +443,32 @@ export default function App() {
                   onVacateRoom={vacateRoom}
                   onOccupyRoom={occupyRoom}
                   onUpdateRenter={updateRenter}
+                  onDeleteRoom={handleDeleteRoom}
                 />
               )}
+            </div>
+          )}
+
+          {/* Payments View */}
+          {isPaymentsView && (
+            <div className="space-y-4">
+              <PaymentsList
+                payments={
+                  payments as Parameters<typeof PaymentsList>[0]["payments"]
+                }
+              />
+            </div>
+          )}
+
+          {/* Due View */}
+          {isDueView && (
+            <div className="space-y-4">
+              <DueList
+                contracts={
+                  dueContracts as Parameters<typeof DueList>[0]["contracts"]
+                }
+                onRecordPayment={updateRoomPayment}
+              />
             </div>
           )}
         </div>

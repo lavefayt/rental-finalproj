@@ -21,7 +21,18 @@ export async function GET(request: NextRequest) {
 
     const { data: rooms, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        },
+        { status: 500 }
+      );
+    }
 
     if (!includeContract) {
       return NextResponse.json({ data: rooms }, { status: 200 });
@@ -68,9 +79,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: roomsWithContracts }, { status: 200 });
   } catch (error) {
-    console.error("Error fetching rooms:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const errorDetails = error instanceof Error ? error.stack : String(error);
+    console.error("Error fetching rooms:", {
+      message: errorMessage,
+      details: errorDetails,
+      hint: "",
+      code: "",
+    });
     return NextResponse.json(
-      { error: "Failed to fetch rooms" },
+      {
+        error: "Failed to fetch rooms",
+        message: errorMessage,
+        details: errorDetails,
+      },
       { status: 500 }
     );
   }
