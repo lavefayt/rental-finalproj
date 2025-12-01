@@ -163,6 +163,7 @@ export function AddRoomDialog({
 
               <div className="flex gap-2 pt-4">
                 <Button
+                  type="button"
                   onClick={() => setIsOpen(false)}
                   variant="outline"
                   className="flex-1"
