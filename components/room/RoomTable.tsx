@@ -36,7 +36,11 @@ import { VacantRoomView } from "./VacantRoomView";
 import { OccupiedRoomView } from "./OccupiedRoomView";
 import { truncateName } from "@/utils/textUtils";
 import { isContractExpired, formatDate } from "@/utils/dateUtils";
-import { isPastDue, getTotalRent, getPaymentStatus } from "@/utils/paymentUtils";
+import {
+  isPastDue,
+  getTotalRent,
+  getPaymentStatus,
+} from "@/utils/paymentUtils";
 import { NewTenantFormData } from "@/lib/schemas/tenant.schema";
 import { PaymentFormData } from "@/lib/schemas/payment.schema";
 import { RenewalFormData } from "@/lib/schemas/renewal.schema";
@@ -378,13 +382,26 @@ export function RoomTable({
                           {getTotalRent(room).toLocaleString()}
                         </div>
                         {(() => {
-                          const status = getPaymentStatus(room.renter.amountPaid, getTotalRent(room));
+                          const status = getPaymentStatus(
+                            room.renter.amountPaid,
+                            getTotalRent(room)
+                          );
                           if (status === "paid") {
-                            return <Badge className="bg-green-600 mt-1">Paid</Badge>;
+                            return (
+                              <Badge className="bg-green-600 mt-1">Paid</Badge>
+                            );
                           } else if (status === "partial") {
-                            return <Badge className="bg-yellow-500 mt-1">Partial</Badge>;
+                            return (
+                              <Badge className="bg-yellow-500 mt-1">
+                                Partial
+                              </Badge>
+                            );
                           } else {
-                            return <Badge variant="destructive" className="mt-1">Unpaid</Badge>;
+                            return (
+                              <Badge variant="destructive" className="mt-1">
+                                Unpaid
+                              </Badge>
+                            );
                           }
                         })()}
                       </div>

@@ -3,42 +3,42 @@ import { createClient } from "@/utils/supabase/server";
 import { CreateRoomRequest } from "@/types/room.types";
 
 // Helper function to calculate total rent based on contract duration
+// Uses full months × monthly rent + remaining days × daily rate
 function calculateTotalRent(
   startDate: string,
   endDate: string,
-  monthlyRent: number,
-  storedTotalRent?: number,
-  dailyRate?: number
+  monthlyRent: number
 ): number {
-  // Use stored total_rent if available (for extended contracts)
-  if (storedTotalRent) {
-    return storedTotalRent;
-  }
-
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const diffTime = end.getTime() - start.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  // Daily rate calculation
-  const calculatedDailyRate = dailyRate || Math.round(monthlyRent / 30);
+  // Calculate full months
+  let fullMonths =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth());
 
-  // Determine total rent based on duration
-  if (diffDays === 365 || diffDays === 366) {
-    // Yearly contract
-    return monthlyRent * 12;
-  } else if (diffDays >= 28 && diffDays <= 31) {
-    // Monthly contract (standard month)
-    return monthlyRent;
-  } else if (diffDays < 28) {
-    // Custom contract (less than a month) - use daily rate
-    return diffDays * calculatedDailyRate;
-  } else {
-    // More than one month - calculate full months + remaining days
-    const fullMonths = Math.floor(diffDays / 30);
-    const remainingDays = diffDays % 30;
-    return (fullMonths * monthlyRent) + (remainingDays * calculatedDailyRate);
+  // Calculate remaining days after full months
+  const tempDate = new Date(start);
+  tempDate.setMonth(tempDate.getMonth() + fullMonths);
+
+  // If tempDate is past end, we went too far
+  if (tempDate > end) {
+    fullMonths--;
+    tempDate.setMonth(tempDate.getMonth() - 1);
   }
+
+  // Calculate remaining days
+  const remainingDays = Math.ceil(
+    (end.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  // Daily rate is monthly rent / 30
+  const dailyRate = Math.round(monthlyRent / 30);
+
+  // Total rent = full months × monthly rent + remaining days × daily rate
+  const totalRent = fullMonths * monthlyRent + remainingDays * dailyRate;
+
+  return Math.max(totalRent, 0);
 }
 
 export async function GET(request: NextRequest) {
@@ -104,13 +104,11 @@ export async function GET(request: NextRequest) {
 
         const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-        // Calculate total rent using the same formula
+        // Calculate total rent from contract dates
         const contractTotal = calculateTotalRent(
           contract.start_date,
           contract.end_date,
-          contract.monthly_rent,
-          contract.total_rent,
-          room.daily_rate
+          contract.monthly_rent
         );
         const balance = contractTotal - totalPaid;
 
@@ -123,7 +121,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Check if overdue
-        const isOverdue = new Date(contract.end_date) < new Date() && balance > 0;
+        const isOverdue =
+          new Date(contract.end_date) < new Date() && balance > 0;
 
         return {
           ...room,

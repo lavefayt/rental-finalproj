@@ -53,7 +53,7 @@ function transformRoomData(apiRoom: RoomWithCurrentContract): Room {
       contractType = "custom";
       const fullMonths = Math.floor(diffDays / 30);
       const remainingDays = diffDays % 30;
-      totalRent = (fullMonths * apiRoom.base_price) + (remainingDays * dailyRate);
+      totalRent = fullMonths * apiRoom.base_price + remainingDays * dailyRate;
     }
 
     // Use stored total_rent if available (for extended contracts)
