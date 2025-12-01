@@ -46,7 +46,7 @@ export function PaymentForm({
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
       <div className="flex gap-2">
         <div className="flex-1">
-          <Label htmlFor="payment">Add Payment</Label>
+          <Label htmlFor="payment">Add Payment <span className="text-red-500">*</span></Label>
           <Input
             id="payment"
             type="number"
@@ -126,7 +126,7 @@ export function StandalonePaymentForm({
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="paymentAmount">Payment Amount</Label>
+        <Label htmlFor="paymentAmount">Payment Amount <span className="text-red-500">*</span></Label>
         <Input
           id="paymentAmount"
           type="number"

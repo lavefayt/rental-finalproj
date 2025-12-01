@@ -46,7 +46,7 @@ export function EditRenterForm({ initialData, onSave, onCancel }: EditRenterForm
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="firstName">First Name</Label>
+          <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
           <Input
             id="firstName"
             {...register('firstName')}
@@ -59,7 +59,7 @@ export function EditRenterForm({ initialData, onSave, onCancel }: EditRenterForm
         </div>
 
         <div>
-          <Label htmlFor="lastName">Last Name</Label>
+          <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
           <Input
             id="lastName"
             {...register('lastName')}
@@ -73,7 +73,7 @@ export function EditRenterForm({ initialData, onSave, onCancel }: EditRenterForm
       </div>
 
       <div>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
         <Input
           id="email"
           type="email"
@@ -87,7 +87,7 @@ export function EditRenterForm({ initialData, onSave, onCancel }: EditRenterForm
       </div>
 
       <div>
-        <Label htmlFor="contactNumber">Contact Number</Label>
+        <Label htmlFor="contactNumber">Contact Number <span className="text-red-500">*</span></Label>
         <Input
           id="contactNumber"
           {...register('contactNumber')}

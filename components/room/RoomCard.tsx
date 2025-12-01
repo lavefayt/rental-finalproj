@@ -14,13 +14,21 @@ import { AlertCircle, User, X } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { VacantRoomView } from "./VacantRoomView";
 import { OccupiedRoomView } from "./OccupiedRoomView";
-import { Room, ConfirmDialogState, initialConfirmDialogState } from "@/types/app.types";
+import {
+  Room,
+  ConfirmDialogState,
+  initialConfirmDialogState,
+} from "@/types/app.types";
 import { NewTenantFormData } from "@/lib/schemas/tenant.schema";
 import { PaymentFormData } from "@/lib/schemas/payment.schema";
 import { RenewalFormData } from "@/lib/schemas/renewal.schema";
 import { truncateName } from "@/utils/textUtils";
 import { isContractExpired } from "@/utils/dateUtils";
-import { isPastDue, calculateBalance, calculateLateFee } from "@/utils/paymentUtils";
+import {
+  isPastDue,
+  calculateBalance,
+  calculateLateFee,
+} from "@/utils/paymentUtils";
 
 interface RoomCardProps {
   room: Room;
@@ -73,7 +81,9 @@ export function RoomCard({
     initialConfirmDialogState
   );
 
-  const expired = room.renter ? isContractExpired(room.renter.contractEndDate) : false;
+  const expired = room.renter
+    ? isContractExpired(room.renter.contractEndDate)
+    : false;
   const pastDue = isPastDue(room);
 
   const handleMarkFullyPaid = () => {
@@ -108,7 +118,9 @@ export function RoomCard({
     setConfirmDialog({
       open: true,
       title: "Add Payment?",
-      description: `Are you sure you want to add ₱${amount.toLocaleString()} to Room ${room.roomNumber}'s payment?`,
+      description: `Are you sure you want to add ₱${amount.toLocaleString()} to Room ${
+        room.roomNumber
+      }'s payment?`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -119,21 +131,28 @@ export function RoomCard({
     });
   };
 
-  const handleRenewContract = (data: RenewalFormData & { additionalRent: number }) => {
+  const handleRenewContract = (
+    data: RenewalFormData & { additionalRent: number }
+  ) => {
     setConfirmDialog({
       open: true,
       title: "Renew Contract?",
       description: `Are you sure you want to renew the contract for Room ${
         room.roomNumber
       } until ${new Date(data.endDate).toLocaleDateString()}?${
-        data.additionalRent > 0 
+        data.additionalRent > 0
           ? ` This will add ₱${data.additionalRent.toLocaleString()} to the total rent.`
           : ""
       }`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
-        onRenewContract(room.id, data.endDate, data.contractType, data.additionalRent);
+        onRenewContract(
+          room.id,
+          data.endDate,
+          data.contractType,
+          data.additionalRent
+        );
         setIsLoading(false);
         setConfirmDialog(initialConfirmDialogState);
       },
@@ -261,7 +280,9 @@ export function RoomCard({
             <div className="mt-2 flex items-center gap-2 text-slate-600">
               <User className="w-4 h-4" />
               <span className="truncate">
-                {truncateName(`${room.renter.firstName} ${room.renter.lastName}`)}
+                {truncateName(
+                  `${room.renter.firstName} ${room.renter.lastName}`
+                )}
               </span>
             </div>
           )}
@@ -277,7 +298,9 @@ export function RoomCard({
       <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-3xl">Room {room.roomNumber}</DialogTitle>
+            <DialogTitle className="text-3xl">
+              Room {room.roomNumber}
+            </DialogTitle>
             <DialogDescription className="text-2xl text-slate-900 mt-2">
               ₱{room.price.toLocaleString()}/month
             </DialogDescription>

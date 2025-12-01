@@ -401,7 +401,8 @@ export function TenantsList({
                   {/* Payment Information */}
                   <div
                     className={`p-4 rounded-lg border ${
-                      selectedRoom.renter.amountPaid < getTotalRent(selectedRoom)
+                      selectedRoom.renter.amountPaid <
+                      getTotalRent(selectedRoom)
                         ? isContractExpired(selectedRoom.renter.contractEndDate)
                           ? "bg-red-50 border-red-200"
                           : "bg-orange-50 border-orange-200"
@@ -413,7 +414,8 @@ export function TenantsList({
                         <DollarSign className="w-5 h-5" />
                         Payment Information
                       </h3>
-                      {selectedRoom.renter.amountPaid < getTotalRent(selectedRoom) ? (
+                      {selectedRoom.renter.amountPaid <
+                      getTotalRent(selectedRoom) ? (
                         <Badge variant="destructive">Unpaid Balance</Badge>
                       ) : (
                         <Badge className="bg-green-600">Fully Paid</Badge>
@@ -423,14 +425,19 @@ export function TenantsList({
                       <div className="flex justify-between">
                         <span className="text-slate-600">Amount Paid:</span>
                         <span className="text-slate-900">
-                          ₱{selectedRoom.renter.amountPaid.toLocaleString()} / ₱{getTotalRent(selectedRoom).toLocaleString()}
+                          ₱{selectedRoom.renter.amountPaid.toLocaleString()} / ₱
+                          {getTotalRent(selectedRoom).toLocaleString()}
                         </span>
                       </div>
                       {selectedRoom.renter.contractType === "custom" ? (
                         <div className="flex justify-between">
                           <span className="text-slate-600">Daily Rate:</span>
                           <span className="text-slate-900">
-                            ₱{(selectedRoom.dailyRate || Math.round(selectedRoom.price / 30)).toLocaleString()}
+                            ₱
+                            {(
+                              selectedRoom.dailyRate ||
+                              Math.round(selectedRoom.price / 30)
+                            ).toLocaleString()}
                           </span>
                         </div>
                       ) : (
@@ -445,7 +452,8 @@ export function TenantsList({
                         <span className="text-slate-600">Balance:</span>
                         <span
                           className={
-                            selectedRoom.renter.amountPaid < getTotalRent(selectedRoom)
+                            selectedRoom.renter.amountPaid <
+                            getTotalRent(selectedRoom)
                               ? "text-red-600"
                               : "text-green-600"
                           }
@@ -453,12 +461,14 @@ export function TenantsList({
                           ₱
                           {Math.max(
                             0,
-                            getTotalRent(selectedRoom) - selectedRoom.renter.amountPaid
+                            getTotalRent(selectedRoom) -
+                              selectedRoom.renter.amountPaid
                           ).toLocaleString()}
                         </span>
                       </div>
                       {isContractExpired(selectedRoom.renter.contractEndDate) &&
-                        selectedRoom.renter.amountPaid < getTotalRent(selectedRoom) && (
+                        selectedRoom.renter.amountPaid <
+                          getTotalRent(selectedRoom) && (
                           <>
                             <div className="flex justify-between border-t pt-2 mt-2">
                               <span className="text-red-600">

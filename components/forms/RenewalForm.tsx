@@ -14,7 +14,11 @@ import {
 } from "@/components/ui/select";
 import { renewalSchema, RenewalFormData } from "@/lib/schemas/renewal.schema";
 import { ContractType, Room } from "@/types/app.types";
-import { calculateEndDate, getToday, calculateAdditionalRent } from "@/utils/dateUtils";
+import {
+  calculateEndDate,
+  getToday,
+  calculateAdditionalRent,
+} from "@/utils/dateUtils";
 
 interface RenewalFormProps {
   room: Room;
@@ -46,15 +50,16 @@ export function RenewalForm({
   const endDate = useWatch({ control: form.control, name: "endDate" });
 
   // Calculate additional rent based on extension period
-  const additionalRent = startDate && endDate
-    ? calculateAdditionalRent(
-        startDate,
-        endDate,
-        room.price,
-        room.dailyRate,
-        contractType
-      )
-    : 0;
+  const additionalRent =
+    startDate && endDate
+      ? calculateAdditionalRent(
+          startDate,
+          endDate,
+          room.price,
+          room.dailyRate,
+          contractType
+        )
+      : 0;
 
   const handleContractTypeChange = (value: ContractType) => {
     form.setValue("contractType", value);
@@ -86,7 +91,7 @@ export function RenewalForm({
       <h3 className="text-red-600">Contract Expired - Action Required</h3>
 
       <div className="space-y-2">
-        <Label htmlFor="renewContractType">Contract Type</Label>
+        <Label htmlFor="renewContractType">Contract Type <span className="text-red-500">*</span></Label>
         <Select value={contractType} onValueChange={handleContractTypeChange}>
           <SelectTrigger>
             <SelectValue />
@@ -99,13 +104,15 @@ export function RenewalForm({
         </Select>
         {contractType === "custom" && (
           <p className="text-sm text-slate-500">
-            Daily rate: ₱{(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}/day
+            Daily rate: ₱
+            {(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}
+            /day
           </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label>New Contract Period</Label>
+        <Label>New Contract Period <span className="text-red-500">*</span></Label>
         <div className="flex items-center gap-2">
           <Input
             id="renewalStartDate"
@@ -152,7 +159,10 @@ export function RenewalForm({
             <strong>Extension Cost:</strong> ₱{additionalRent.toLocaleString()}
           </p>
           <p className="text-xs text-blue-600 mt-1">
-            New total rent: ₱{((room.renter?.totalRent || room.price) + additionalRent).toLocaleString()}
+            New total rent: ₱
+            {(
+              (room.renter?.totalRent || room.price) + additionalRent
+            ).toLocaleString()}
           </p>
         </div>
       )}

@@ -51,18 +51,24 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
         <div className="flex justify-between">
           <span className="text-slate-600">Paid:</span>
           <span className="text-slate-900">
-            ₱{room.renter.amountPaid.toLocaleString()} / ₱{totalRent.toLocaleString()}
+            ₱{room.renter.amountPaid.toLocaleString()} / ₱
+            {totalRent.toLocaleString()}
           </span>
         </div>
         {room.renter.contractType === "custom" ? (
           <div className="flex justify-between">
             <span className="text-slate-600">Daily Rate:</span>
-            <span className="text-slate-900">₱{(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}</span>
+            <span className="text-slate-900">
+              ₱
+              {(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}
+            </span>
           </div>
         ) : (
           <div className="flex justify-between">
             <span className="text-slate-600">Monthly Rate:</span>
-            <span className="text-slate-900">₱{room.price.toLocaleString()}</span>
+            <span className="text-slate-900">
+              ₱{room.price.toLocaleString()}
+            </span>
           </div>
         )}
         <div className="flex justify-between">
