@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Room } from "../App";
+import { Room } from "@/types/app.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,7 +60,6 @@ export function TenantsList({
 }: TenantsListProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -151,9 +150,7 @@ export function TenantsList({
       title: "Remove Tenant?",
       description: `Are you sure you want to remove ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? This will vacate the room and terminate the contract.`,
       onConfirm: async () => {
-        setIsLoading(true);
         await onVacateRoom(room.id);
-        setIsLoading(false);
         setConfirmDialog({ ...confirmDialog, open: false });
         handleCloseDialog();
       },

@@ -1,8 +1,8 @@
-import { Room } from './room.types';
-import { Renter } from './renter.types';
-import { Payment } from './payment.types';
+import { RoomAPI } from "./room.types";
+import { Renter } from "./renter.types";
+import { Payment } from "./payment.types";
 
-export type ContractStatus = 'active' | 'expired' | 'terminated' | 'renewed';
+export type ContractStatus = "active" | "expired" | "terminated" | "renewed";
 
 export interface Contract {
   id: string;
@@ -23,11 +23,11 @@ export interface ContractWithRenter extends Contract {
 }
 
 export interface ContractWithRoom extends Contract {
-  room: Room;
+  room: RoomAPI;
 }
 
 export interface ContractWithDetails extends Contract {
-  room: Room;
+  room: RoomAPI;
   renter: Renter;
   payments: Payment[];
   total_paid: number;

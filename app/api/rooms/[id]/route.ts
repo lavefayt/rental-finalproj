@@ -86,7 +86,11 @@ export async function PATCH(
       );
     }
 
-    const updateData = {};
+    const updateData: {
+      room_number?: string;
+      base_price?: number;
+      status?: string;
+    } = {};
     if (room_number !== undefined) updateData.room_number = room_number;
     if (base_price !== undefined) updateData.base_price = base_price;
     if (status !== undefined) updateData.status = status;

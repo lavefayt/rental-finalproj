@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import { ConfirmDialog } from "../ConfirmDialog";
-import { Room } from "../App";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Room } from "@/types/app.types";
 
 interface AddRoomDialogProps {
   onAddRoom: (room: { roomNumber: string; price: number }) => void;

@@ -14,27 +14,11 @@ import { useRooms } from "@/hooks/useRooms";
 import { useRenters } from "@/hooks/useRenters";
 import { useContracts } from "@/hooks/useContracts";
 import { usePayments } from "@/hooks/usePayments";
-import { RoomWithContract } from "@/types/room.types";
-
-export interface Room {
-  id: string;
-  roomNumber: string;
-  price: number;
-  status: "occupied" | "vacant";
-  renter?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    contactNumber: string;
-    rentStartDate: string;
-    contractEndDate: string;
-    amountPaid: number;
-    contractType?: "monthly" | "yearly" | "custom";
-  };
-}
+import { RoomWithCurrentContract } from "@/types/room.types";
+import { Room } from "@/types/app.types";
 
 // Helper function to transform API data to local Room interface
-function transformRoomData(apiRoom: RoomWithContract): Room {
+function transformRoomData(apiRoom: RoomWithCurrentContract): Room {
   return {
     id: apiRoom.id,
     roomNumber: apiRoom.room_number,
@@ -454,7 +438,9 @@ export default function App() {
             <div className="space-y-4">
               <PaymentsList
                 payments={
-                  payments as Parameters<typeof PaymentsList>[0]["payments"]
+                  payments as unknown as Parameters<
+                    typeof PaymentsList
+                  >[0]["payments"]
                 }
               />
             </div>
@@ -465,7 +451,9 @@ export default function App() {
             <div className="space-y-4">
               <DueList
                 contracts={
-                  dueContracts as Parameters<typeof DueList>[0]["contracts"]
+                  dueContracts as unknown as Parameters<
+                    typeof DueList
+                  >[0]["contracts"]
                 }
                 onRecordPayment={updateRoomPayment}
               />

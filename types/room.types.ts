@@ -1,15 +1,15 @@
-export type RoomStatus = 'vacant' | 'occupied' | 'maintenance';
+export type RoomStatusAPI = "vacant" | "occupied" | "maintenance";
 
-export interface Room {
+export interface RoomAPI {
   id: string;
   room_number: string;
   base_price: number;
-  status: RoomStatus;
+  status: RoomStatusAPI;
   created_at: string;
   updated_at: string;
 }
 
-export interface RoomWithCurrentContract extends Room {
+export interface RoomWithCurrentContract extends RoomAPI {
   current_contract?: ContractWithRenter;
 }
 
@@ -17,7 +17,7 @@ export interface RoomSummary {
   id: string;
   room_number: string;
   base_price: number;
-  status: RoomStatus;
+  status: RoomStatusAPI;
   total_contracts: number;
   active_contracts: number;
   total_revenue: number;
@@ -27,21 +27,21 @@ export interface RoomSummary {
 export interface CreateRoomRequest {
   room_number: string;
   base_price: number;
-  status?: RoomStatus;
+  status?: RoomStatusAPI;
 }
 
 export interface UpdateRoomRequest {
   room_number?: string;
   base_price?: number;
-  status?: RoomStatus;
+  status?: RoomStatusAPI;
 }
 
 export interface RoomFilters {
-  status?: RoomStatus;
+  status?: RoomStatusAPI;
   min_price?: number;
   max_price?: number;
   search?: string;
 }
 
 // Import types needed from other files
-import { ContractWithRenter } from './contract.types';
+import { ContractWithRenter } from "./contract.types";
