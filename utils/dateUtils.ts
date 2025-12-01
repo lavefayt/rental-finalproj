@@ -72,3 +72,68 @@ export function getDaysUntilDueText(endDate: string): string {
     return `${days} days left`;
   }
 }
+
+/**
+ * Calculate the number of days between two dates
+ */
+export function getDaysBetween(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = end.getTime() - start.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Calculate the number of months between two dates (rounded up)
+ */
+export function getMonthsBetween(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  const yearDiff = end.getFullYear() - start.getFullYear();
+  const monthDiff = end.getMonth() - start.getMonth();
+  const dayDiff = end.getDate() - start.getDate();
+  
+  let months = yearDiff * 12 + monthDiff;
+  
+  // If there are extra days, round up to next month
+  if (dayDiff > 0) {
+    months += 1;
+  }
+  
+  return Math.max(1, months); // At least 1 month
+}
+
+/**
+ * Calculate total rent based on contract type and duration
+ */
+export function calculateTotalRent(
+  startDate: string,
+  endDate: string,
+  monthlyRate: number,
+  dailyRate?: number,
+  contractType?: ContractType
+): number {
+  if (contractType === "custom" && dailyRate) {
+    // For custom contracts, calculate by days
+    const days = getDaysBetween(startDate, endDate);
+    return days * dailyRate;
+  } else {
+    // For monthly/yearly, calculate by months
+    const months = getMonthsBetween(startDate, endDate);
+    return months * monthlyRate;
+  }
+}
+
+/**
+ * Calculate additional rent for contract extension
+ */
+export function calculateAdditionalRent(
+  currentEndDate: string,
+  newEndDate: string,
+  monthlyRate: number,
+  dailyRate?: number,
+  contractType?: ContractType
+): number {
+  return calculateTotalRent(currentEndDate, newEndDate, monthlyRate, dailyRate, contractType);
+}

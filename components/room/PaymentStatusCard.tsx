@@ -8,6 +8,7 @@ import {
   calculateBalance,
   calculateLateFee,
   calculateTotalDue,
+  getTotalRent,
 } from "@/utils/paymentUtils";
 import { isContractExpired } from "@/utils/dateUtils";
 
@@ -23,6 +24,7 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
   const balance = calculateBalance(room);
   const lateFee = calculateLateFee(room);
   const totalDue = calculateTotalDue(room);
+  const totalRent = getTotalRent(room);
 
   const cardClassName = `p-4 rounded-lg border ${
     pastDue
@@ -47,15 +49,22 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
       </div>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-600">Amount Paid:</span>
+          <span className="text-slate-600">Paid:</span>
           <span className="text-slate-900">
-            ₱{room.renter.amountPaid.toLocaleString()}
+            ₱{room.renter.amountPaid.toLocaleString()} / ₱{totalRent.toLocaleString()}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-600">Monthly Rent:</span>
-          <span className="text-slate-900">₱{room.price.toLocaleString()}</span>
-        </div>
+        {room.renter.contractType === "custom" ? (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Daily Rate:</span>
+            <span className="text-slate-900">₱{(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}</span>
+          </div>
+        ) : (
+          <div className="flex justify-between">
+            <span className="text-slate-600">Monthly Rate:</span>
+            <span className="text-slate-900">₱{room.price.toLocaleString()}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-slate-600">Balance:</span>
           <span className={pastDue ? "text-red-600" : "text-green-600"}>

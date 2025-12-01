@@ -9,7 +9,7 @@ import { RenewalForm } from "@/components/forms/RenewalForm";
 import { EditRenterForm } from "@/components/tenants/EditRenterForm";
 import { PaymentFormData } from "@/lib/schemas/payment.schema";
 import { RenewalFormData } from "@/lib/schemas/renewal.schema";
-import { isPastDue } from "@/utils/paymentUtils";
+import { isPastDue, calculateBalance } from "@/utils/paymentUtils";
 import { isContractExpired } from "@/utils/dateUtils";
 
 interface OccupiedRoomViewProps {
@@ -26,7 +26,7 @@ interface OccupiedRoomViewProps {
   }) => void;
   onPaymentSubmit: (data: PaymentFormData) => void;
   onMarkFullyPaid: () => void;
-  onRenewalSubmit: (data: RenewalFormData) => void;
+  onRenewalSubmit: (data: RenewalFormData & { additionalRent: number }) => void;
   onNotRenew: () => void;
 }
 
@@ -46,6 +46,7 @@ export function OccupiedRoomView({
 
   const pastDue = isPastDue(room);
   const expired = isContractExpired(room.renter.contractEndDate);
+  const balance = calculateBalance(room);
 
   if (isEditing) {
     return (
@@ -78,11 +79,13 @@ export function OccupiedRoomView({
           onSubmit={onPaymentSubmit}
           onMarkFullyPaid={onMarkFullyPaid}
           isLoading={isLoading}
+          maxAmount={balance}
         />
       )}
 
       {expired && (
         <RenewalForm
+          room={room}
           onSubmit={onRenewalSubmit}
           onNotRenew={onNotRenew}
           isLoading={isLoading}

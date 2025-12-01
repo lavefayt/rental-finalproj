@@ -113,6 +113,16 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
       return;
 
     const amount = parseFloat(data.amount);
+    const remainingBalance = selectedContract.monthly_rent - selectedContract.total_paid;
+    
+    // Prevent excess payment
+    if (amount > remainingBalance) {
+      paymentForm.setError("amount", {
+        type: "manual",
+        message: `Payment cannot exceed balance of ₱${remainingBalance.toLocaleString()}`,
+      });
+      return;
+    }
 
     setConfirmDialog({
       open: true,
@@ -349,6 +359,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                     id="paymentAmount"
                     type="number"
                     min="0"
+                    max={selectedContract.monthly_rent - selectedContract.total_paid}
                     step="any"
                     placeholder="Enter amount"
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -361,6 +372,9 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                       {paymentForm.formState.errors.amount.message}
                     </p>
                   )}
+                  <p className="text-slate-500 text-xs">
+                    Max: ₱{(selectedContract.monthly_rent - selectedContract.total_paid).toLocaleString()}
+                  </p>
                 </div>
 
                 <div className="flex gap-2">

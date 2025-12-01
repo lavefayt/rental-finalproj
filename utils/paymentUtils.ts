@@ -7,10 +7,19 @@ import { isContractExpired } from "./dateUtils";
 export const LATE_FEE_PERCENTAGE = 0.1;
 
 /**
+ * Get the total rent for a room (uses totalRent if available, falls back to monthly price)
+ */
+export function getTotalRent(room: Room): number {
+  if (!room.renter) return room.price;
+  return room.renter.totalRent || room.price;
+}
+
+/**
  * Check if a room has an unpaid balance
  */
 export function isPastDue(room: Room): boolean {
-  return room.renter !== undefined && room.renter.amountPaid < room.price;
+  if (!room.renter) return false;
+  return room.renter.amountPaid < getTotalRent(room);
 }
 
 /**
@@ -18,7 +27,7 @@ export function isPastDue(room: Room): boolean {
  */
 export function calculateBalance(room: Room): number {
   if (!room.renter) return 0;
-  return Math.max(0, room.price - room.renter.amountPaid);
+  return Math.max(0, getTotalRent(room) - room.renter.amountPaid);
 }
 
 /**

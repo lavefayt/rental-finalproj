@@ -19,10 +19,45 @@ import { Room } from "@/types/app.types";
 
 // Helper function to transform API data to local Room interface
 function transformRoomData(apiRoom: RoomWithCurrentContract): Room {
+  // Calculate total rent based on contract duration
+  let totalRent = apiRoom.base_price; // Default to one month
+  let contractType: "monthly" | "yearly" | "custom" = "monthly";
+  
+  if (apiRoom.current_contract) {
+    const startDate = new Date(apiRoom.current_contract.start_date);
+    const endDate = new Date(apiRoom.current_contract.end_date);
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = Math.ceil(diffDays / 30);
+    
+    // Determine contract type based on duration
+    if (diffDays === 365 || diffDays === 366) {
+      contractType = "yearly";
+      totalRent = apiRoom.base_price * 12;
+    } else if (diffDays >= 28 && diffDays <= 31) {
+      contractType = "monthly";
+      totalRent = apiRoom.base_price;
+    } else if (diffMonths > 1) {
+      contractType = "monthly";
+      totalRent = apiRoom.base_price * diffMonths;
+    } else {
+      // Custom contract (days)
+      contractType = "custom";
+      const dailyRate = apiRoom.daily_rate || Math.round(apiRoom.base_price / 30);
+      totalRent = diffDays * dailyRate;
+    }
+    
+    // Use stored total_rent if available (for extended contracts)
+    if (apiRoom.current_contract.total_rent) {
+      totalRent = apiRoom.current_contract.total_rent;
+    }
+  }
+  
   return {
     id: apiRoom.id,
     roomNumber: apiRoom.room_number,
     price: apiRoom.base_price,
+    dailyRate: apiRoom.daily_rate,
     status: apiRoom.status as "occupied" | "vacant",
     renter: apiRoom.current_contract
       ? {
@@ -38,7 +73,8 @@ function transformRoomData(apiRoom: RoomWithCurrentContract): Room {
           rentStartDate: apiRoom.current_contract.start_date,
           contractEndDate: apiRoom.current_contract.end_date,
           amountPaid: apiRoom.current_contract.total_paid || 0,
-          contractType: "monthly",
+          totalRent: totalRent,
+          contractType: contractType,
         }
       : undefined,
   };
@@ -111,7 +147,12 @@ export default function App() {
     }
   };
 
-  const renewContract = async (roomId: string, newEndDate: string) => {
+  const renewContract = async (
+    roomId: string,
+    newEndDate: string,
+    contractType?: "monthly" | "yearly" | "custom",
+    additionalRent?: number
+  ) => {
     try {
       const room = apiRooms.find((r) => r.id === roomId);
       if (!room?.current_contract) {
@@ -119,8 +160,15 @@ export default function App() {
         return;
       }
 
+      // Calculate new total rent if additional rent is provided
+      const currentTotalRent = room.current_contract.total_rent || room.base_price;
+      const newTotalRent = additionalRent 
+        ? currentTotalRent + additionalRent 
+        : currentTotalRent;
+
       await updateContract(room.current_contract.id, {
         end_date: newEndDate,
+        total_rent: newTotalRent,
       });
 
       fetchRooms();

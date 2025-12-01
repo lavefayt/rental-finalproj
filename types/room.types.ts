@@ -4,6 +4,7 @@ export interface RoomAPI {
   id: string;
   room_number: string;
   base_price: number;
+  daily_rate?: number;
   status: RoomStatusAPI;
   created_at: string;
   updated_at: string;
@@ -17,6 +18,7 @@ export interface RoomSummary {
   id: string;
   room_number: string;
   base_price: number;
+  daily_rate?: number;
   status: RoomStatusAPI;
   total_contracts: number;
   active_contracts: number;
@@ -27,12 +29,14 @@ export interface RoomSummary {
 export interface CreateRoomRequest {
   room_number: string;
   base_price: number;
+  daily_rate?: number;
   status?: RoomStatusAPI;
 }
 
 export interface UpdateRoomRequest {
   room_number?: string;
   base_price?: number;
+  daily_rate?: number;
   status?: RoomStatusAPI;
 }
 
@@ -43,5 +47,4 @@ export interface RoomFilters {
   search?: string;
 }
 
-// Import types needed from other files
 import { ContractWithRenter } from "./contract.types";

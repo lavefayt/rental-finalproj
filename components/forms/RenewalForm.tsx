@@ -13,16 +13,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { renewalSchema, RenewalFormData } from "@/lib/schemas/renewal.schema";
-import { ContractType } from "@/types/app.types";
-import { calculateEndDate, getToday } from "@/utils/dateUtils";
+import { ContractType, Room } from "@/types/app.types";
+import { calculateEndDate, getToday, calculateAdditionalRent } from "@/utils/dateUtils";
 
 interface RenewalFormProps {
-  onSubmit: (data: RenewalFormData) => void;
+  room: Room;
+  onSubmit: (data: RenewalFormData & { additionalRent: number }) => void;
   onNotRenew?: () => void;
   isLoading?: boolean;
 }
 
 export function RenewalForm({
+  room,
   onSubmit,
   onNotRenew,
   isLoading = false,
@@ -30,8 +32,8 @@ export function RenewalForm({
   const form = useForm<RenewalFormData>({
     resolver: zodResolver(renewalSchema),
     defaultValues: {
-      contractType: "monthly",
-      startDate: "",
+      contractType: room.renter?.contractType || "monthly",
+      startDate: room.renter?.contractEndDate || getToday(),
       endDate: "",
     },
   });
@@ -40,7 +42,19 @@ export function RenewalForm({
     control: form.control,
     name: "contractType",
   });
+  const startDate = useWatch({ control: form.control, name: "startDate" });
   const endDate = useWatch({ control: form.control, name: "endDate" });
+
+  // Calculate additional rent based on extension period
+  const additionalRent = startDate && endDate
+    ? calculateAdditionalRent(
+        startDate,
+        endDate,
+        room.price,
+        room.dailyRate,
+        contractType
+      )
+    : 0;
 
   const handleContractTypeChange = (value: ContractType) => {
     form.setValue("contractType", value);
@@ -60,9 +74,13 @@ export function RenewalForm({
     }
   };
 
+  const handleSubmit = (data: RenewalFormData) => {
+    onSubmit({ ...data, additionalRent });
+  };
+
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit(handleSubmit)}
       className="space-y-3 pt-4 border-t"
     >
       <h3 className="text-red-600">Contract Expired - Action Required</h3>
@@ -76,9 +94,14 @@ export function RenewalForm({
           <SelectContent>
             <SelectItem value="monthly">Monthly (1 month)</SelectItem>
             <SelectItem value="yearly">Yearly (1 year)</SelectItem>
-            <SelectItem value="custom">Custom Duration</SelectItem>
+            <SelectItem value="custom">Custom Duration (Daily Rate)</SelectItem>
           </SelectContent>
         </Select>
+        {contractType === "custom" && (
+          <p className="text-sm text-slate-500">
+            Daily rate: ₱{(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}/day
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -98,7 +121,7 @@ export function RenewalForm({
           <Input
             id="renewalEndDate"
             type="date"
-            min={getToday()}
+            min={startDate || getToday()}
             disabled={contractType !== "custom"}
             className="flex-1"
             aria-invalid={!!form.formState.errors.endDate}
@@ -121,6 +144,18 @@ export function RenewalForm({
           </p>
         )}
       </div>
+
+      {/* Additional rent preview */}
+      {additionalRent > 0 && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Extension Cost:</strong> ₱{additionalRent.toLocaleString()}
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            New total rent: ₱{((room.renter?.totalRent || room.price) + additionalRent).toLocaleString()}
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Button type="submit" className="flex-1" disabled={isLoading}>

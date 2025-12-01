@@ -11,6 +11,7 @@ export interface Contract {
   start_date: string;
   end_date: string;
   monthly_rent: number;
+  total_rent?: number; // Total rent for the contract period (updated when extended)
   status: ContractStatus;
   created_at: string;
   updated_at: string;
@@ -41,12 +42,14 @@ export interface CreateContractRequest {
   start_date: string;
   end_date: string;
   monthly_rent: number;
+  total_rent?: number;
 }
 
 export interface UpdateContractRequest {
   start_date?: string;
   end_date?: string;
   monthly_rent?: number;
+  total_rent?: number;
   status?: ContractStatus;
 }
 

@@ -8,6 +8,7 @@ export interface Renter {
   rentStartDate: string;
   contractEndDate: string;
   amountPaid: number;
+  totalRent: number; // Total rent for the contract period
   contractType?: ContractType;
 }
 
@@ -17,7 +18,8 @@ export type RoomStatus = "occupied" | "vacant";
 export interface Room {
   id: string;
   roomNumber: string;
-  price: number;
+  price: number; // Monthly rate
+  dailyRate?: number; // Daily rate for custom contracts
   status: RoomStatus;
   renter?: Renter;
 }
@@ -78,7 +80,8 @@ export interface RoomCallbacks {
   onRenewContract: (
     roomId: string,
     newEndDate: string,
-    contractType?: ContractType
+    contractType?: ContractType,
+    additionalRent?: number
   ) => void;
   onVacateRoom: (roomId: string) => void;
   onOccupyRoom: (

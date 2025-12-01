@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Trash2, UserPlus } from "lucide-react";
 
 import { Room, ConfirmDialogState, initialConfirmDialogState } from "@/types/app.types";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -32,7 +32,7 @@ import { VacantRoomView } from "./VacantRoomView";
 import { OccupiedRoomView } from "./OccupiedRoomView";
 import { truncateName } from "@/utils/textUtils";
 import { isContractExpired, formatDate } from "@/utils/dateUtils";
-import { isPastDue } from "@/utils/paymentUtils";
+import { isPastDue, getTotalRent } from "@/utils/paymentUtils";
 import { NewTenantFormData } from "@/lib/schemas/tenant.schema";
 import { PaymentFormData } from "@/lib/schemas/payment.schema";
 import { RenewalFormData } from "@/lib/schemas/renewal.schema";
@@ -44,7 +44,8 @@ interface RoomTableProps {
   onRenewContract: (
     roomId: string,
     newEndDate: string,
-    contractType?: "monthly" | "yearly" | "custom"
+    contractType?: "monthly" | "yearly" | "custom",
+    additionalRent?: number
   ) => void;
   onVacateRoom: (roomId: string) => void;
   onOccupyRoom: (
@@ -138,7 +139,7 @@ export function RoomTable({
   };
 
   // Handle renewing contract
-  const handleRenewContract = (data: RenewalFormData) => {
+  const handleRenewContract = (data: RenewalFormData & { additionalRent: number }) => {
     if (!selectedRoom) return;
 
     setConfirmDialog({
@@ -146,11 +147,15 @@ export function RoomTable({
       title: "Renew Contract?",
       description: `Are you sure you want to renew the contract for Room ${
         selectedRoom.roomNumber
-      } until ${new Date(data.endDate).toLocaleDateString()}?`,
+      } until ${new Date(data.endDate).toLocaleDateString()}?${
+        data.additionalRent > 0 
+          ? ` This will add ₱${data.additionalRent.toLocaleString()} to the total rent.`
+          : ""
+      }`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
-        onRenewContract(selectedRoom.id, data.endDate, data.contractType);
+        onRenewContract(selectedRoom.id, data.endDate, data.contractType, data.additionalRent);
         setIsLoading(false);
         setConfirmDialog(initialConfirmDialogState);
         setSelectedRoom(null);
@@ -260,7 +265,7 @@ export function RoomTable({
             <TableRow>
               <TableHead>Room #</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Monthly Rent</TableHead>
               <TableHead>Tenant</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
@@ -303,7 +308,7 @@ export function RoomTable({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>₱{room.price.toLocaleString()}</TableCell>
+                  <TableCell>₱{room.price.toLocaleString()}/mo</TableCell>
                   <TableCell>
                     {tenantName === "-" ? "-" : truncateName(tenantName)}
                   </TableCell>
@@ -329,7 +334,7 @@ export function RoomTable({
                       <div>
                         <div>
                           ₱{room.renter.amountPaid.toLocaleString()} / ₱
-                          {room.price.toLocaleString()}
+                          {getTotalRent(room).toLocaleString()}
                         </div>
                         {pastDue ? (
                           <Badge variant="destructive" className="mt-1">
@@ -355,10 +360,17 @@ export function RoomTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
+                        {room.status === "vacant" ? (
+                          <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Add Tenant
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => handleDeleteRoom(room)}
                           className="text-red-600"

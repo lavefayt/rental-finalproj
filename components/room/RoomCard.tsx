@@ -28,7 +28,8 @@ interface RoomCardProps {
   onRenewContract: (
     roomId: string,
     newEndDate: string,
-    contractType?: "monthly" | "yearly" | "custom"
+    contractType?: "monthly" | "yearly" | "custom",
+    additionalRent?: number
   ) => void;
   onVacateRoom: (roomId: string) => void;
   onOccupyRoom: (
@@ -118,17 +119,21 @@ export function RoomCard({
     });
   };
 
-  const handleRenewContract = (data: RenewalFormData) => {
+  const handleRenewContract = (data: RenewalFormData & { additionalRent: number }) => {
     setConfirmDialog({
       open: true,
       title: "Renew Contract?",
       description: `Are you sure you want to renew the contract for Room ${
         room.roomNumber
-      } until ${new Date(data.endDate).toLocaleDateString()}?`,
+      } until ${new Date(data.endDate).toLocaleDateString()}?${
+        data.additionalRent > 0 
+          ? ` This will add ₱${data.additionalRent.toLocaleString()} to the total rent.`
+          : ""
+      }`,
       onConfirm: async () => {
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
-        onRenewContract(room.id, data.endDate, data.contractType);
+        onRenewContract(room.id, data.endDate, data.contractType, data.additionalRent);
         setIsLoading(false);
         setConfirmDialog(initialConfirmDialogState);
       },

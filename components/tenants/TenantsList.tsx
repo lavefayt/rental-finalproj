@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { EditRenterForm } from "./EditRenterForm";
 import { truncateName } from "@/utils/textUtils";
+import { getTotalRent } from "@/utils/paymentUtils";
 import { ConfirmDialog } from "../ConfirmDialog";
 
 interface TenantsListProps {
@@ -80,16 +81,16 @@ export function TenantsList({
   const calculateDue = (room: Room) => {
     if (!room.renter) return 0;
 
-    const isContractExpired =
-      new Date(room.renter.contractEndDate) < new Date();
-    const isPastDue = room.renter.amountPaid < room.price;
+    const totalRent = getTotalRent(room);
+    const isExpired = new Date(room.renter.contractEndDate) < new Date();
+    const hasPastDue = room.renter.amountPaid < totalRent;
 
-    if (!isPastDue) return 0;
+    if (!hasPastDue) return 0;
 
-    const balance = room.price - room.renter.amountPaid;
+    const balance = totalRent - room.renter.amountPaid;
 
     // Add 10% late fee if contract expired
-    if (isContractExpired) {
+    if (isExpired) {
       const lateFee = Math.round(balance * 0.1);
       return balance + lateFee;
     }
@@ -102,7 +103,8 @@ export function TenantsList({
   };
 
   const isPastDue = (room: Room) => {
-    return room.renter && room.renter.amountPaid < room.price;
+    const totalRent = getTotalRent(room);
+    return room.renter && room.renter.amountPaid < totalRent;
   };
 
   const handleSaveRenter = (data: {
@@ -128,10 +130,11 @@ export function TenantsList({
   const handleDeleteTenant = (room: Room) => {
     if (!room.renter) return;
 
-    const hasUnpaidBalance = room.renter.amountPaid < room.price;
+    const totalRent = getTotalRent(room);
+    const hasUnpaidBalance = room.renter.amountPaid < totalRent;
 
     if (hasUnpaidBalance) {
-      const remainingBalance = room.price - room.renter.amountPaid;
+      const remainingBalance = totalRent - room.renter.amountPaid;
       setConfirmDialog({
         open: true,
         title: "Cannot Remove Tenant",
@@ -179,7 +182,7 @@ export function TenantsList({
             <TableRow>
               <TableHead>Room #</TableHead>
               <TableHead>Tenant Name</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Monthly Rent</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
               <TableHead>Payment Status</TableHead>
@@ -203,7 +206,7 @@ export function TenantsList({
                 >
                   <TableCell>{room.roomNumber}</TableCell>
                   <TableCell>{truncateName(fullName)}</TableCell>
-                  <TableCell>₱{room.price.toLocaleString()}</TableCell>
+                  <TableCell>₱{room.price.toLocaleString()}/mo</TableCell>
                   <TableCell>
                     {new Date(room.renter.rentStartDate).toLocaleDateString()}
                   </TableCell>
@@ -223,7 +226,7 @@ export function TenantsList({
                     <div>
                       <div>
                         ₱{room.renter.amountPaid.toLocaleString()} / ₱
-                        {room.price.toLocaleString()}
+                        {getTotalRent(room).toLocaleString()}
                       </div>
                       {pastDue ? (
                         <Badge variant="destructive" className="mt-1">
@@ -398,7 +401,7 @@ export function TenantsList({
                   {/* Payment Information */}
                   <div
                     className={`p-4 rounded-lg border ${
-                      selectedRoom.renter.amountPaid < selectedRoom.price
+                      selectedRoom.renter.amountPaid < getTotalRent(selectedRoom)
                         ? isContractExpired(selectedRoom.renter.contractEndDate)
                           ? "bg-red-50 border-red-200"
                           : "bg-orange-50 border-orange-200"
@@ -410,7 +413,7 @@ export function TenantsList({
                         <DollarSign className="w-5 h-5" />
                         Payment Information
                       </h3>
-                      {selectedRoom.renter.amountPaid < selectedRoom.price ? (
+                      {selectedRoom.renter.amountPaid < getTotalRent(selectedRoom) ? (
                         <Badge variant="destructive">Unpaid Balance</Badge>
                       ) : (
                         <Badge className="bg-green-600">Fully Paid</Badge>
@@ -420,20 +423,29 @@ export function TenantsList({
                       <div className="flex justify-between">
                         <span className="text-slate-600">Amount Paid:</span>
                         <span className="text-slate-900">
-                          ₱{selectedRoom.renter.amountPaid.toLocaleString()}
+                          ₱{selectedRoom.renter.amountPaid.toLocaleString()} / ₱{getTotalRent(selectedRoom).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Monthly Rent:</span>
-                        <span className="text-slate-900">
-                          ₱{selectedRoom.price.toLocaleString()}
-                        </span>
-                      </div>
+                      {selectedRoom.renter.contractType === "custom" ? (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Daily Rate:</span>
+                          <span className="text-slate-900">
+                            ₱{(selectedRoom.dailyRate || Math.round(selectedRoom.price / 30)).toLocaleString()}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Monthly Rent:</span>
+                          <span className="text-slate-900">
+                            ₱{selectedRoom.price.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-slate-600">Balance:</span>
                         <span
                           className={
-                            selectedRoom.renter.amountPaid < selectedRoom.price
+                            selectedRoom.renter.amountPaid < getTotalRent(selectedRoom)
                               ? "text-red-600"
                               : "text-green-600"
                           }
@@ -441,12 +453,12 @@ export function TenantsList({
                           ₱
                           {Math.max(
                             0,
-                            selectedRoom.price - selectedRoom.renter.amountPaid
+                            getTotalRent(selectedRoom) - selectedRoom.renter.amountPaid
                           ).toLocaleString()}
                         </span>
                       </div>
                       {isContractExpired(selectedRoom.renter.contractEndDate) &&
-                        selectedRoom.renter.amountPaid < selectedRoom.price && (
+                        selectedRoom.renter.amountPaid < getTotalRent(selectedRoom) && (
                           <>
                             <div className="flex justify-between border-t pt-2 mt-2">
                               <span className="text-red-600">
@@ -455,7 +467,7 @@ export function TenantsList({
                               <span className="text-red-600">
                                 ₱
                                 {Math.round(
-                                  (selectedRoom.price -
+                                  (getTotalRent(selectedRoom) -
                                     selectedRoom.renter.amountPaid) *
                                     0.1
                                 ).toLocaleString()}
