@@ -36,54 +36,65 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Calculate payment status if requested
-    if (paymentStatus && contracts) {
+    // Calculate payment status if requested OR if fetching active/completed/evicted contracts
+    if ((paymentStatus || status === "active" || status === "completed" || status === "evicted") && contracts) {
       const contractsWithPayments = await Promise.all(
         contracts.map(async (contract) => {
+          // Get total paid by querying payments directly
           const { data: payments } = await supabase
             .from("payments")
-            .select("amount, payment_date")
+            .select("amount")
             .eq("contract_id", contract.id);
 
-          const totalPaid =
-            payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-          const balance = contract.monthly_rent - totalPaid;
+          const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-          let status = "unpaid";
-          if (totalPaid >= contract.monthly_rent) {
-            status = "paid";
+          // Calculate balance using total_rent for custom contracts, monthly_rent otherwise
+          const totalRent = contract.total_rent || contract.monthly_rent;
+          const remaining = Math.max(0, totalRent - totalPaid);
+
+          let paymentStatusValue = "unpaid";
+          if (totalPaid >= totalRent) {
+            paymentStatusValue = "paid";
           } else if (totalPaid > 0) {
-            status = "partial";
+            paymentStatusValue = "partial";
           }
 
           // Check if overdue
           const isOverdue =
-            new Date(contract.end_date) < new Date() && balance > 0;
+            new Date(contract.end_date) < new Date() && remaining > 0;
 
           return {
             ...contract,
             total_paid: totalPaid,
-            balance,
-            payment_status: status,
+            balance: remaining,
+            payment_status: paymentStatusValue,
             is_overdue: isOverdue,
           };
         })
       );
 
       // Filter by payment status if specified
-      const filtered =
-        paymentStatus === "overdue"
-          ? contractsWithPayments.filter((c) => c.is_overdue)
-          : paymentStatus === "unpaid"
-          ? contractsWithPayments.filter(
-              (c) =>
-                c.payment_status === "unpaid" || c.payment_status === "partial"
-            )
-          : paymentStatus === "paid"
-          ? contractsWithPayments.filter((c) => c.payment_status === "paid")
-          : contractsWithPayments;
+      if (paymentStatus) {
+        const filtered =
+          paymentStatus === "overdue"
+            ? contractsWithPayments.filter((c) => c.is_overdue)
+            : paymentStatus === "unpaid"
+            ? contractsWithPayments.filter(
+                (c) =>
+                  c.payment_status === "unpaid" ||
+                  c.payment_status === "partial"
+              )
+            : paymentStatus === "paid"
+            ? contractsWithPayments.filter((c) => c.payment_status === "paid")
+            : contractsWithPayments;
 
-      return NextResponse.json({ data: filtered }, { status: 200 });
+        return NextResponse.json({ data: filtered }, { status: 200 });
+      }
+
+      return NextResponse.json(
+        { data: contractsWithPayments },
+        { status: 200 }
+      );
     }
 
     return NextResponse.json({ data: contracts }, { status: 200 });

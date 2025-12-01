@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, CreditCard, Banknote, Building2 } from "lucide-react";
+import { DollarSign, CreditCard, Banknote, Building2, Smartphone } from "lucide-react";
 
 interface Payment {
   id: string;
@@ -20,6 +20,7 @@ interface Payment {
   contract?: {
     id: string;
     monthly_rent: number;
+    status?: string;
     room?: {
       room_number: string;
     };
@@ -45,6 +46,8 @@ export function PaymentsList({ payments }: PaymentsListProps) {
       case "bank":
       case "bank_transfer":
         return <Building2 className="w-4 h-4" />;
+      case "gcash":
+        return <Smartphone className="w-4 h-4" />;
       default:
         return <Banknote className="w-4 h-4" />;
     }
@@ -57,14 +60,15 @@ export function PaymentsList({ payments }: PaymentsListProps) {
       .join(" ");
   };
 
-  if (payments.length === 0) {
-    return (
-      <div className="text-center py-12 bg-white rounded-lg shadow">
-        <DollarSign className="w-16 h-16 mx-auto text-slate-400 mb-4" />
-        <p className="text-slate-600">No payments recorded yet</p>
-      </div>
-    );
-  }
+  const getRoomDisplay = (payment: Payment) => {
+    if (payment.contract?.room?.room_number) {
+      return `Room ${payment.contract.room.room_number}`;
+    }
+    if (payment.contract?.status === "evicted") {
+      return "Evicted";
+    }
+    return "N/A";
+  };
 
   return (
     <div className="space-y-4">
@@ -86,63 +90,72 @@ export function PaymentsList({ payments }: PaymentsListProps) {
         </div>
       </div>
 
-      {/* Payments Table */}
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Room</TableHead>
-              <TableHead>Tenant</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Notes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {payments.map((payment) => (
-              <TableRow key={payment.id}>
-                <TableCell>
-                  {new Date(payment.payment_date).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    Room {payment.contract?.room?.room_number || "N/A"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">
-                      {payment.contract?.renter?.name || "Unknown"}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {payment.contract?.renter?.email || ""}
-                    </p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="font-semibold text-green-600">
-                    ₱{payment.amount.toLocaleString()}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {getPaymentMethodIcon(payment.payment_method)}
-                    <span className="text-sm">
-                      {formatPaymentMethod(payment.payment_method)}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-slate-500">
-                    {payment.notes || "-"}
-                  </span>
-                </TableCell>
+      {payments.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <DollarSign className="w-16 h-16 mx-auto text-slate-400 mb-4" />
+          <p className="text-slate-600">No payments recorded yet</p>
+        </div>
+      ) : (
+        /* Payments Table */
+        <div className="bg-white rounded-lg shadow overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Room</TableHead>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Notes</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {payments.map((payment) => (
+                <TableRow key={payment.id}>
+                  <TableCell>
+                    {new Date(payment.payment_date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={payment.contract?.status === "evicted" ? "destructive" : "outline"}
+                    >
+                      {getRoomDisplay(payment)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">
+                        {payment.contract?.renter?.name || "Unknown"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {payment.contract?.renter?.email || ""}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-semibold text-green-600">
+                      ₱{payment.amount.toLocaleString()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getPaymentMethodIcon(payment.payment_method)}
+                      <span className="text-sm">
+                        {formatPaymentMethod(payment.payment_method)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-slate-500">
+                      {payment.notes || "-"}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,10 @@ import { useState } from "react";
 import { RoomCard } from "@/components/room/RoomCard";
 import { RoomTable } from "@/components/room/RoomTable";
 import { AddRoomDialog } from "@/components/room/AddRoomDialog";
+import { AddPaymentDialog } from "@/components/forms/AddPaymentDialog";
 import { TenantsList } from "@/components/tenants/TenantsList";
+import { FormerTenantsList } from "@/components/tenants/FormerTenantsList";
+import { EvictedTenantsList } from "@/components/tenants/EvictedTenantsList";
 import { PaymentsList } from "@/components/PaymentsList";
 import { DueList } from "@/components/DueList";
 import { Sidebar } from "@/components/Sidebar";
@@ -103,6 +106,28 @@ export default function App() {
       paymentStatus: "unpaid",
       autoFetch: true,
     });
+  const {
+    contracts: formerTenantContracts,
+    fetchContracts: fetchFormerTenants,
+  } = useContracts({
+    status: "completed",
+    autoFetch: true,
+  });
+  const {
+    contracts: evictedTenantContracts,
+    fetchContracts: fetchEvictedTenants,
+  } = useContracts({
+    status: "evicted",
+    autoFetch: true,
+  });
+  // Get all active contracts for payment form
+  const {
+    contracts: activeContracts,
+    fetchContracts: fetchActiveContracts,
+  } = useContracts({
+    status: "active",
+    autoFetch: true,
+  });
   const { createContract, updateContract } = useContracts({ autoFetch: false });
   const { payments, fetchPayments, createPayment } = usePayments({
     autoFetch: true,
@@ -148,6 +173,33 @@ export default function App() {
     }
   };
 
+  // Record payment directly by contract ID (for payments page and evicted tenants)
+  const recordPaymentByContract = async (
+    contractId: string, 
+    amount: number, 
+    paymentMethod: string = "cash",
+    notes?: string
+  ) => {
+    try {
+      await createPayment({
+        contract_id: contractId,
+        amount: amount,
+        payment_date: new Date().toISOString().split("T")[0],
+        payment_method: paymentMethod,
+        notes: notes,
+      });
+
+      // Refresh all data
+      fetchRooms();
+      fetchPayments();
+      fetchDueContracts();
+      fetchActiveContracts();
+      fetchEvictedTenants();
+    } catch (err) {
+      console.error("Error recording payment:", err);
+    }
+  };
+
   const renewContract = async (
     roomId: string,
     newEndDate: string,
@@ -187,13 +239,36 @@ export default function App() {
         return;
       }
 
+      // Mark as completed instead of terminated to preserve as former tenant
       await updateContract(room.current_contract.id, {
-        status: "terminated",
+        status: "completed",
       });
 
       fetchRooms();
+      fetchFormerTenants();
     } catch (err) {
       console.error("Error vacating room:", err);
+    }
+  };
+
+  const evictTenant = async (roomId: string) => {
+    try {
+      const room = apiRooms.find((r) => r.id === roomId);
+      if (!room?.current_contract) {
+        console.error("No active contract found");
+        return;
+      }
+
+      // Mark as evicted - room becomes vacant but balance remains
+      await updateContract(room.current_contract.id, {
+        status: "evicted",
+      });
+
+      fetchRooms();
+      fetchDueContracts();
+      fetchEvictedTenants();
+    } catch (err) {
+      console.error("Error evicting tenant:", err);
     }
   };
 
@@ -321,6 +396,8 @@ export default function App() {
   const isRoomView = ["all-rooms", "vacant", "occupied"].includes(selectedView);
   const isPaymentsView = selectedView === "payments";
   const isDueView = selectedView === "due";
+  const isFormerTenantsView = selectedView === "former-tenants";
+  const isEvictedTenantsView = selectedView === "evicted-tenants";
 
   // Get title based on selected view
   const getViewTitle = () => {
@@ -328,6 +405,8 @@ export default function App() {
       "all-tenants": "All Tenants",
       "fully-paid": "Fully Paid Tenants",
       "not-fully-paid": "Not Fully Paid Tenants",
+      "former-tenants": "Former Tenants",
+      "evicted-tenants": "Evicted Tenants",
       "all-rooms": "All Rooms",
       vacant: "Vacant Rooms",
       occupied: "Occupied Rooms",
@@ -347,6 +426,8 @@ export default function App() {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           paymentsCount={payments.length}
           dueCount={dueContracts.length}
+          formerTenantsCount={formerTenantContracts.length}
+          evictedTenantsCount={evictedTenantContracts.length}
         />
         <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
           <div className="text-center">
@@ -368,6 +449,8 @@ export default function App() {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           paymentsCount={payments.length}
           dueCount={dueContracts.length}
+          formerTenantsCount={formerTenantContracts.length}
+          evictedTenantsCount={evictedTenantContracts.length}
         />
         <main className="flex-1 p-8 md:ml-0 flex items-center justify-center">
           <div className="text-center text-red-600">
@@ -391,6 +474,8 @@ export default function App() {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         paymentsCount={payments.length}
         dueCount={dueContracts.length}
+        formerTenantsCount={formerTenantContracts.length}
+        evictedTenantsCount={evictedTenantContracts.length}
       />
 
       <main className="flex-1 p-8 md:ml-0">
@@ -399,7 +484,18 @@ export default function App() {
             <div>
               <h2 className="text-slate-900 text-2xl">{getViewTitle()}</h2>
             </div>
-            <AddRoomDialog onAddRoom={addRoom} existingRooms={rooms} />
+            {isRoomView && (
+              <AddRoomDialog onAddRoom={addRoom} existingRooms={rooms} />
+            )}
+            {isPaymentsView && (
+              <AddPaymentDialog
+                contracts={[
+                  ...activeContracts,
+                  ...evictedTenantContracts,
+                ] as unknown as Parameters<typeof AddPaymentDialog>[0]["contracts"]}
+                onSubmit={recordPaymentByContract}
+              />
+            )}
           </div>
 
           {/* Tenant Views */}
@@ -409,6 +505,7 @@ export default function App() {
                 rooms={getFilteredTenants()}
                 onUpdateRenter={updateRenter}
                 onVacateRoom={vacateRoom}
+                onEvictTenant={evictTenant}
               />
             </div>
           )}
@@ -463,6 +560,7 @@ export default function App() {
                       onUpdatePayment={updateRoomPayment}
                       onRenewContract={renewContract}
                       onVacateRoom={vacateRoom}
+                      onEvictTenant={evictTenant}
                       onOccupyRoom={occupyRoom}
                       onUpdateRenter={updateRenter}
                       onDeleteRoom={handleDeleteRoom}
@@ -475,6 +573,7 @@ export default function App() {
                   onUpdatePayment={updateRoomPayment}
                   onRenewContract={renewContract}
                   onVacateRoom={vacateRoom}
+                  onEvictTenant={evictTenant}
                   onOccupyRoom={occupyRoom}
                   onUpdateRenter={updateRenter}
                   onDeleteRoom={handleDeleteRoom}
@@ -506,6 +605,23 @@ export default function App() {
                   >[0]["contracts"]
                 }
                 onRecordPayment={updateRoomPayment}
+              />
+            </div>
+          )}
+
+          {/* Former Tenants View */}
+          {isFormerTenantsView && (
+            <div className="space-y-4">
+              <FormerTenantsList contracts={formerTenantContracts} />
+            </div>
+          )}
+
+          {/* Evicted Tenants View */}
+          {isEvictedTenantsView && (
+            <div className="space-y-4">
+              <EvictedTenantsList 
+                contracts={evictedTenantContracts}
+                onRecordPayment={recordPaymentByContract}
               />
             </div>
           )}

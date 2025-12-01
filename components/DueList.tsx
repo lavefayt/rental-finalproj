@@ -31,6 +31,7 @@ interface DueContract {
   start_date: string;
   end_date: string;
   monthly_rent: number;
+  total_rent?: number;
   total_paid: number;
   balance: number;
   is_overdue: boolean;
@@ -113,8 +114,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
       return;
 
     const amount = parseFloat(data.amount);
-    const remainingBalance =
-      selectedContract.monthly_rent - selectedContract.total_paid;
+    const remainingBalance = selectedContract.balance;
 
     // Prevent excess payment
     if (amount > remainingBalance) {
@@ -145,8 +145,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
     if (!selectedContract || !onRecordPayment || !selectedContract.room?.id)
       return;
 
-    const remainingBalance =
-      selectedContract.monthly_rent - selectedContract.total_paid;
+    const remainingBalance = selectedContract.balance;
     if (remainingBalance <= 0) return;
 
     setConfirmDialog({
@@ -207,7 +206,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
             <TableRow>
               <TableHead>Room</TableHead>
               <TableHead>Tenant</TableHead>
-              <TableHead>Monthly Rent</TableHead>
+              <TableHead>Total Rent</TableHead>
               <TableHead>Paid</TableHead>
               <TableHead>Remaining Balance</TableHead>
               <TableHead>Due Date</TableHead>
@@ -218,8 +217,8 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
             {contracts.map((contract) => {
               const daysUntilDue = getDaysUntilDue(contract.end_date);
               const isOverdue = contract.is_overdue;
-              const remainingBalance =
-                contract.monthly_rent - contract.total_paid;
+              const totalRent = contract.total_rent || contract.monthly_rent;
+              const remainingBalance = contract.balance;
 
               return (
                 <TableRow
@@ -245,7 +244,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
-                    ₱{contract.monthly_rent.toLocaleString()}
+                    ₱{totalRent.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <span className="text-green-600 font-medium">
@@ -260,7 +259,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                       <p className="text-xs text-slate-500">
                         {contract.total_paid > 0
                           ? `${Math.round(
-                              (contract.total_paid / contract.monthly_rent) *
+                              (contract.total_paid / totalRent) *
                                 100
                             )}% paid`
                           : "No payment yet"}
@@ -327,9 +326,9 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
               {/* Payment Summary */}
               <div className="bg-slate-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Monthly Rent:</span>
+                  <span className="text-slate-500">Total Rent:</span>
                   <span className="font-medium">
-                    ₱{selectedContract.monthly_rent.toLocaleString()}
+                    ₱{(selectedContract.total_rent || selectedContract.monthly_rent).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -343,11 +342,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                     Remaining Balance:
                   </span>
                   <span className="font-bold text-red-600">
-                    ₱
-                    {(
-                      selectedContract.monthly_rent -
-                      selectedContract.total_paid
-                    ).toLocaleString()}
+                    ₱{selectedContract.balance.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -355,15 +350,14 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
               {/* Payment Form */}
               <form onSubmit={handleSubmitPayment} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="paymentAmount">Payment Amount <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="paymentAmount">
+                    Payment Amount <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="paymentAmount"
                     type="number"
                     min="0"
-                    max={
-                      selectedContract.monthly_rent -
-                      selectedContract.total_paid
-                    }
+                    max={selectedContract.balance}
                     step="any"
                     placeholder="Enter amount"
                     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -377,11 +371,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                     </p>
                   )}
                   <p className="text-slate-500 text-xs">
-                    Max: ₱
-                    {(
-                      selectedContract.monthly_rent -
-                      selectedContract.total_paid
-                    ).toLocaleString()}
+                    Max: ₱{selectedContract.balance.toLocaleString()}
                   </p>
                 </div>
 

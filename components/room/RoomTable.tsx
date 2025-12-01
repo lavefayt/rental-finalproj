@@ -52,6 +52,7 @@ interface RoomTableProps {
     additionalRent?: number
   ) => void;
   onVacateRoom: (roomId: string) => void;
+  onEvictTenant?: (roomId: string) => void;
   onOccupyRoom: (
     roomId: string,
     renterDetails: {
@@ -82,6 +83,7 @@ export function RoomTable({
   onUpdatePayment,
   onRenewContract,
   onVacateRoom,
+  onEvictTenant,
   onOccupyRoom,
   onUpdateRenter,
   onDeleteRoom,
@@ -187,6 +189,30 @@ export function RoomTable({
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
         onVacateRoom(selectedRoom.id);
+        setSelectedRoom(null);
+        setIsLoading(false);
+        setConfirmDialog(initialConfirmDialogState);
+      },
+    });
+  };
+
+  // Handle evicting tenant
+  const handleEvict = () => {
+    if (!selectedRoom || !selectedRoom.renter || !onEvictTenant) return;
+
+    const balance = calculateBalance(selectedRoom);
+    const lateFee = calculateLateFee(selectedRoom);
+    const totalDue = balance + lateFee;
+
+    setConfirmDialog({
+      open: true,
+      title: "Evict Tenant?",
+      description: `Are you sure you want to evict ${selectedRoom.renter.firstName} ${selectedRoom.renter.lastName} from Room ${selectedRoom.roomNumber}? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        setIsLoading(true);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        onEvictTenant(selectedRoom.id);
         setSelectedRoom(null);
         setIsLoading(false);
         setConfirmDialog(initialConfirmDialogState);
@@ -434,6 +460,7 @@ export function RoomTable({
                   onMarkFullyPaid={handleMarkFullyPaid}
                   onRenewalSubmit={handleRenewContract}
                   onNotRenew={handleNotRenew}
+                  onEvict={onEvictTenant ? handleEvict : undefined}
                 />
               )
             )}

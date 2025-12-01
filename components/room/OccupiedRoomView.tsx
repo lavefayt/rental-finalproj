@@ -1,6 +1,7 @@
 "use client";
 
 import { Room } from "@/types/app.types";
+import { Button } from "@/components/ui/button";
 import { RoomDetailsCard } from "./RoomDetailsCard";
 import { RenterInfoCard } from "./RenterInfoCard";
 import { PaymentStatusCard } from "./PaymentStatusCard";
@@ -11,6 +12,7 @@ import { PaymentFormData } from "@/lib/schemas/payment.schema";
 import { RenewalFormData } from "@/lib/schemas/renewal.schema";
 import { isPastDue, calculateBalance } from "@/utils/paymentUtils";
 import { isContractExpired } from "@/utils/dateUtils";
+import { UserX } from "lucide-react";
 
 interface OccupiedRoomViewProps {
   room: Room;
@@ -28,6 +30,7 @@ interface OccupiedRoomViewProps {
   onMarkFullyPaid: () => void;
   onRenewalSubmit: (data: RenewalFormData & { additionalRent: number }) => void;
   onNotRenew: () => void;
+  onEvict?: () => void;
 }
 
 export function OccupiedRoomView({
@@ -41,6 +44,7 @@ export function OccupiedRoomView({
   onMarkFullyPaid,
   onRenewalSubmit,
   onNotRenew,
+  onEvict,
 }: OccupiedRoomViewProps) {
   if (!room.renter) return null;
 
@@ -90,6 +94,24 @@ export function OccupiedRoomView({
           onNotRenew={onNotRenew}
           isLoading={isLoading}
         />
+      )}
+
+      {/* Evict Button - shown when there's unpaid balance */}
+      {pastDue && onEvict && (
+        <div className="border-t pt-4">
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={onEvict}
+            disabled={isLoading}
+          >
+            <UserX className="w-4 h-4 mr-2" />
+            Evict Tenant
+          </Button>
+          <p className="text-xs text-slate-500 mt-2 text-center">
+            Evicting will vacate the room but keep the outstanding balance on record
+          </p>
+        </div>
       )}
     </div>
   );

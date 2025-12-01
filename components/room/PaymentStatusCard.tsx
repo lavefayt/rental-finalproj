@@ -9,6 +9,8 @@ import {
   calculateLateFee,
   calculateTotalDue,
   getTotalRent,
+  getDailyRate,
+  getDaysOverdue,
 } from "@/utils/paymentUtils";
 import { isContractExpired } from "@/utils/dateUtils";
 
@@ -25,6 +27,8 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
   const lateFee = calculateLateFee(room);
   const totalDue = calculateTotalDue(room);
   const totalRent = getTotalRent(room);
+  const dailyRate = getDailyRate(room);
+  const daysOverdue = getDaysOverdue(room.renter.contractEndDate);
 
   const cardClassName = `p-4 rounded-lg border ${
     pastDue
@@ -59,8 +63,7 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
           <div className="flex justify-between">
             <span className="text-slate-600">Daily Rate:</span>
             <span className="text-slate-900">
-              ₱
-              {(room.dailyRate || Math.round(room.price / 30)).toLocaleString()}
+              ₱{dailyRate.toLocaleString()}
             </span>
           </div>
         ) : (
@@ -80,7 +83,10 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
         {expired && pastDue && lateFee > 0 && (
           <>
             <div className="flex justify-between border-t pt-2 mt-2">
-              <span className="text-red-600">Late Fee (10%):</span>
+              <span className="text-red-600">
+                Late Fee ({daysOverdue} days × ₱{dailyRate.toLocaleString()}
+                /day):
+              </span>
               <span className="text-red-600">₱{lateFee.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">

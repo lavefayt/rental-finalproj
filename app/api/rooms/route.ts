@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Fetch active contracts for each room
     const roomsWithContracts = await Promise.all(
       (rooms || []).map(async (room) => {
-        const { data: contracts } = await supabase
+        const { data: contract } = await supabase
           .from("contracts")
           .select(
             `
@@ -53,26 +53,29 @@ export async function GET(request: NextRequest) {
           .eq("status", "active")
           .single();
 
-        // Calculate total paid if contract exists
-        let total_paid = 0;
-        if (contracts) {
-          const { data: payments } = await supabase
-            .from("payments")
-            .select("amount")
-            .eq("contract_id", contracts.id);
-
-          total_paid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        if (!contract) {
+          return { ...room, current_contract: undefined };
         }
+
+        // Get total paid by querying payments directly
+        const { data: payments } = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("contract_id", contract.id);
+
+        const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+
+        // Calculate balance using total_rent for custom contracts, monthly_rent otherwise
+        const contractTotal = contract.total_rent || contract.monthly_rent;
+        const balance = contractTotal - totalPaid;
 
         return {
           ...room,
-          current_contract: contracts
-            ? {
-                ...contracts,
-                total_paid,
-                balance: contracts.monthly_rent - total_paid,
-              }
-            : undefined,
+          current_contract: {
+            ...contract,
+            total_paid: totalPaid,
+            balance: Math.max(0, balance),
+          },
         };
       })
     );

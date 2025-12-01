@@ -128,7 +128,9 @@ export function AddRoomDialog({
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="roomNumber">Room Number <span className="text-red-500">*</span></Label>
+                <Label htmlFor="roomNumber">
+                  Room Number <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="roomNumber"
                   type="text"
@@ -144,7 +146,9 @@ export function AddRoomDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price">Monthly Rent Price <span className="text-red-500">*</span></Label>
+                <Label htmlFor="price">
+                  Monthly Rent Price <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="price"
                   type="number"

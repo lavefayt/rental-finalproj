@@ -31,21 +31,24 @@ export async function GET(
       throw error;
     }
 
-    // Get payment information
+    // Get total paid by querying payments directly
     const { data: payments } = await supabase
       .from("payments")
-      .select("amount, payment_date")
+      .select("amount")
       .eq("contract_id", id);
 
     const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-    const balance = data.monthly_rent - totalPaid;
+
+    // Calculate balance using total_rent for custom contracts, monthly_rent otherwise
+    const contractTotal = data.total_rent || data.monthly_rent;
+    const balance = Math.max(0, contractTotal - totalPaid);
 
     return NextResponse.json(
       {
         data: {
           ...data,
           total_paid: totalPaid,
-          balance,
+          balance: balance,
         },
       },
       { status: 200 }
@@ -100,8 +103,8 @@ export async function PATCH(
       throw error;
     }
 
-    // If contract is terminated, update room status to vacant
-    if (status === "terminated") {
+    // If contract is terminated, completed, or evicted, update room status to vacant
+    if (status === "terminated" || status === "completed" || status === "evicted") {
       await supabase
         .from("rooms")
         .update({ status: "vacant" })

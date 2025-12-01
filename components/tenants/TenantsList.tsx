@@ -34,10 +34,16 @@ import {
   Trash2,
   MoreHorizontal,
   Eye,
+  UserX,
 } from "lucide-react";
 import { EditRenterForm } from "./EditRenterForm";
 import { truncateName } from "@/utils/textUtils";
-import { getTotalRent } from "@/utils/paymentUtils";
+import {
+  getTotalRent,
+  calculateLateFee,
+  getDailyRate,
+  getDaysOverdue,
+} from "@/utils/paymentUtils";
 import { ConfirmDialog } from "../ConfirmDialog";
 
 interface TenantsListProps {
@@ -52,12 +58,14 @@ interface TenantsListProps {
     }
   ) => void;
   onVacateRoom: (roomId: string) => void;
+  onEvictTenant: (roomId: string) => void;
 }
 
 export function TenantsList({
   rooms,
   onUpdateRenter,
   onVacateRoom,
+  onEvictTenant,
 }: TenantsListProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -82,20 +90,14 @@ export function TenantsList({
     if (!room.renter) return 0;
 
     const totalRent = getTotalRent(room);
-    const isExpired = new Date(room.renter.contractEndDate) < new Date();
     const hasPastDue = room.renter.amountPaid < totalRent;
 
     if (!hasPastDue) return 0;
 
     const balance = totalRent - room.renter.amountPaid;
+    const lateFee = calculateLateFee(room);
 
-    // Add 10% late fee if contract expired
-    if (isExpired) {
-      const lateFee = Math.round(balance * 0.1);
-      return balance + lateFee;
-    }
-
-    return balance;
+    return balance + lateFee;
   };
 
   const isContractExpired = (contractEndDate: string) => {
@@ -154,6 +156,26 @@ export function TenantsList({
       description: `Are you sure you want to remove ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? This will vacate the room and terminate the contract.`,
       onConfirm: async () => {
         await onVacateRoom(room.id);
+        setConfirmDialog({ ...confirmDialog, open: false });
+        handleCloseDialog();
+      },
+    });
+  };
+
+  const handleEvictTenant = (room: Room) => {
+    if (!room.renter) return;
+
+    const totalRent = getTotalRent(room);
+    const remainingBalance = Math.max(0, totalRent - room.renter.amountPaid);
+    const lateFee = calculateLateFee(room);
+    const totalDue = remainingBalance + lateFee;
+
+    setConfirmDialog({
+      open: true,
+      title: "Evict Tenant?",
+      description: `Are you sure you want to evict ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
+      onConfirm: async () => {
+        await onEvictTenant(room.id);
         setConfirmDialog({ ...confirmDialog, open: false });
         handleCloseDialog();
       },
@@ -252,6 +274,13 @@ export function TenantsList({
                         <DropdownMenuItem onClick={() => setSelectedRoom(room)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEvictTenant(room)}
+                          className="text-orange-600"
+                        >
+                          <UserX className="mr-2 h-4 w-4" />
+                          Evict Tenant
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDeleteTenant(room)}
@@ -472,14 +501,18 @@ export function TenantsList({
                           <>
                             <div className="flex justify-between border-t pt-2 mt-2">
                               <span className="text-red-600">
-                                Late Fee (10%):
+                                Late Fee (
+                                {getDaysOverdue(
+                                  selectedRoom.renter.contractEndDate
+                                )}{" "}
+                                days × ₱
+                                {getDailyRate(selectedRoom).toLocaleString()}
+                                /day):
                               </span>
                               <span className="text-red-600">
                                 ₱
-                                {Math.round(
-                                  (getTotalRent(selectedRoom) -
-                                    selectedRoom.renter.amountPaid) *
-                                    0.1
+                                {calculateLateFee(
+                                  selectedRoom
                                 ).toLocaleString()}
                               </span>
                             </div>

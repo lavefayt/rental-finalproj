@@ -40,6 +40,7 @@ interface RoomCardProps {
     additionalRent?: number
   ) => void;
   onVacateRoom: (roomId: string) => void;
+  onEvictTenant?: (roomId: string) => void;
   onOccupyRoom: (
     roomId: string,
     renterDetails: {
@@ -70,6 +71,7 @@ export function RoomCard({
   onUpdatePayment,
   onRenewContract,
   onVacateRoom,
+  onEvictTenant,
   onOccupyRoom,
   onUpdateRenter,
   onDeleteRoom,
@@ -169,6 +171,29 @@ export function RoomCard({
         setIsLoading(true);
         await new Promise((resolve) => setTimeout(resolve, 500));
         onVacateRoom(room.id);
+        setIsOpen(false);
+        setIsLoading(false);
+        setConfirmDialog(initialConfirmDialogState);
+      },
+    });
+  };
+
+  const handleEvict = () => {
+    if (!room.renter || !onEvictTenant) return;
+
+    const balance = calculateBalance(room);
+    const lateFee = calculateLateFee(room);
+    const totalDue = balance + lateFee;
+
+    setConfirmDialog({
+      open: true,
+      title: "Evict Tenant?",
+      description: `Are you sure you want to evict ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
+      variant: "destructive",
+      onConfirm: async () => {
+        setIsLoading(true);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        onEvictTenant(room.id);
         setIsOpen(false);
         setIsLoading(false);
         setConfirmDialog(initialConfirmDialogState);
@@ -321,6 +346,7 @@ export function RoomCard({
                 onMarkFullyPaid={handleMarkFullyPaid}
                 onRenewalSubmit={handleRenewContract}
                 onNotRenew={handleNotRenew}
+                onEvict={onEvictTenant ? handleEvict : undefined}
               />
             )
           )}

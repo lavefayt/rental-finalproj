@@ -73,7 +73,9 @@ export function NewTenantForm({
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="firstName">
+            First Name <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="firstName"
             type="text"
@@ -89,7 +91,9 @@ export function NewTenantForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="lastName">
+            Last Name <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="lastName"
             type="text"
@@ -106,7 +110,9 @@ export function NewTenantForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+        <Label htmlFor="email">
+          Email <span className="text-red-500">*</span>
+        </Label>
         <Input
           id="email"
           type="email"
@@ -122,7 +128,9 @@ export function NewTenantForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="contactNumber">Contact Number <span className="text-red-500">*</span></Label>
+        <Label htmlFor="contactNumber">
+          Contact Number <span className="text-red-500">*</span>
+        </Label>
         <Input
           id="contactNumber"
           type="tel"
@@ -138,7 +146,9 @@ export function NewTenantForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="contractType">Contract Type <span className="text-red-500">*</span></Label>
+        <Label htmlFor="contractType">
+          Contract Type <span className="text-red-500">*</span>
+        </Label>
         <Select value={contractType} onValueChange={handleContractTypeChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select contract type" />
@@ -152,7 +162,9 @@ export function NewTenantForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Contract Period <span className="text-red-500">*</span></Label>
+        <Label>
+          Contract Period <span className="text-red-500">*</span>
+        </Label>
         <div className="flex items-center gap-2">
           <Input
             id="rentStartDate"

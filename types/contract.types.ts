@@ -2,7 +2,13 @@ import { RoomAPI } from "./room.types";
 import { Renter } from "./renter.types";
 import { Payment } from "./payment.types";
 
-export type ContractStatus = "active" | "expired" | "terminated" | "renewed";
+export type ContractStatus =
+  | "active"
+  | "expired"
+  | "terminated"
+  | "renewed"
+  | "completed"
+  | "evicted";
 
 export interface Contract {
   id: string;

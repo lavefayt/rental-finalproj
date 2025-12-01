@@ -15,6 +15,7 @@ import {
   Building2,
   DollarSign,
   AlertTriangle,
+  UserMinus,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -26,6 +27,8 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   paymentsCount?: number;
   dueCount?: number;
+  formerTenantsCount?: number;
+  evictedTenantsCount?: number;
 }
 
 interface NavItem {
@@ -43,6 +46,8 @@ export function Sidebar({
   onToggleCollapse,
   paymentsCount = 0,
   dueCount = 0,
+  formerTenantsCount = 0,
+  evictedTenantsCount = 0,
 }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "tenants",
@@ -93,6 +98,18 @@ export function Sidebar({
           id: "not-fully-paid",
           label: "Not Fully Paid",
           icon: <XCircle className="w-4 h-4" />,
+        },
+        {
+          id: "former-tenants",
+          label: "Former Tenants",
+          icon: <UserMinus className="w-4 h-4" />,
+          badge: formerTenantsCount > 0 ? formerTenantsCount : undefined,
+        },
+        {
+          id: "evicted-tenants",
+          label: "Evicted Tenants",
+          icon: <XCircle className="w-4 h-4" />,
+          badge: evictedTenantsCount > 0 ? evictedTenantsCount : undefined,
         },
       ],
     },

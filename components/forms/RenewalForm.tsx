@@ -91,7 +91,9 @@ export function RenewalForm({
       <h3 className="text-red-600">Contract Expired - Action Required</h3>
 
       <div className="space-y-2">
-        <Label htmlFor="renewContractType">Contract Type <span className="text-red-500">*</span></Label>
+        <Label htmlFor="renewContractType">
+          Contract Type <span className="text-red-500">*</span>
+        </Label>
         <Select value={contractType} onValueChange={handleContractTypeChange}>
           <SelectTrigger>
             <SelectValue />
@@ -112,7 +114,9 @@ export function RenewalForm({
       </div>
 
       <div className="space-y-2">
-        <Label>New Contract Period <span className="text-red-500">*</span></Label>
+        <Label>
+          New Contract Period <span className="text-red-500">*</span>
+        </Label>
         <div className="flex items-center gap-2">
           <Input
             id="renewalStartDate"

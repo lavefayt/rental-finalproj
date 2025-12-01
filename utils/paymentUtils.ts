@@ -1,10 +1,12 @@
 import { Room } from "@/types/app.types";
-import { isContractExpired } from "./dateUtils";
+import { isContractExpired, getDaysUntilDue } from "./dateUtils";
 
 /**
- * Late fee percentage (10%)
+ * Get the daily rate for a room (uses dailyRate if available, falls back to monthly price / 30)
  */
-export const LATE_FEE_PERCENTAGE = 0.1;
+export function getDailyRate(room: Room): number {
+  return room.dailyRate || Math.round(room.price / 30);
+}
 
 /**
  * Get the total rent for a room (uses totalRent if available, falls back to monthly price)
@@ -31,7 +33,16 @@ export function calculateBalance(room: Room): number {
 }
 
 /**
- * Calculate the late fee (10% interest) for a room with expired contract
+ * Get the number of days overdue (0 if not overdue)
+ */
+export function getDaysOverdue(contractEndDate: string): number {
+  const daysUntilDue = getDaysUntilDue(contractEndDate);
+  return daysUntilDue < 0 ? Math.abs(daysUntilDue) : 0;
+}
+
+/**
+ * Calculate the late fee based on daily rate × days overdue
+ * Late fee is charged per day the tenant is past their contract end date
  */
 export function calculateLateFee(room: Room): number {
   if (!room.renter) return 0;
@@ -41,7 +52,10 @@ export function calculateLateFee(room: Room): number {
 
   if (!expired || balance <= 0) return 0;
 
-  return Math.round(balance * LATE_FEE_PERCENTAGE);
+  const daysOverdue = getDaysOverdue(room.renter.contractEndDate);
+  const dailyRate = getDailyRate(room);
+
+  return daysOverdue * dailyRate;
 }
 
 /**
