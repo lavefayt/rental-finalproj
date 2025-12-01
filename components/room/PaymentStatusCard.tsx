@@ -11,6 +11,7 @@ import {
   getTotalRent,
   getDailyRate,
   getDaysOverdue,
+  getPaymentStatus,
 } from "@/utils/paymentUtils";
 import { isContractExpired } from "@/utils/dateUtils";
 
@@ -29,6 +30,7 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
   const totalRent = getTotalRent(room);
   const dailyRate = getDailyRate(room);
   const daysOverdue = getDaysOverdue(room.renter.contractEndDate);
+  const paymentStatus = getPaymentStatus(room.renter.amountPaid, totalRent);
 
   const cardClassName = `p-4 rounded-lg border ${
     pastDue
@@ -45,10 +47,12 @@ export function PaymentStatusCard({ room }: PaymentStatusCardProps) {
           <DollarSign className="w-5 h-5" />
           Payment Status
         </h3>
-        {pastDue ? (
-          <Badge variant="destructive">Unpaid Balance</Badge>
-        ) : (
+        {paymentStatus === "paid" ? (
           <Badge className="bg-green-600">Fully Paid</Badge>
+        ) : paymentStatus === "partial" ? (
+          <Badge className="bg-yellow-500">Partial</Badge>
+        ) : (
+          <Badge variant="destructive">Unpaid</Badge>
         )}
       </div>
       <div className="space-y-2 text-sm">

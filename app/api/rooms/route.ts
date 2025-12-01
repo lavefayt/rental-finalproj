@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { CreateRoomRequest } from "@/types/room.types";
 
+// Helper function to calculate total rent based on contract duration
+function calculateTotalRent(
+  startDate: string,
+  endDate: string,
+  monthlyRent: number,
+  storedTotalRent?: number,
+  dailyRate?: number
+): number {
+  // Use stored total_rent if available (for extended contracts)
+  if (storedTotalRent) {
+    return storedTotalRent;
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  // Daily rate calculation
+  const calculatedDailyRate = dailyRate || Math.round(monthlyRent / 30);
+
+  // Determine total rent based on duration
+  if (diffDays === 365 || diffDays === 366) {
+    // Yearly contract
+    return monthlyRent * 12;
+  } else if (diffDays >= 28 && diffDays <= 31) {
+    // Monthly contract (standard month)
+    return monthlyRent;
+  } else if (diffDays < 28) {
+    // Custom contract (less than a month) - use daily rate
+    return diffDays * calculatedDailyRate;
+  } else {
+    // More than one month - calculate full months + remaining days
+    const fullMonths = Math.floor(diffDays / 30);
+    const remainingDays = diffDays % 30;
+    return (fullMonths * monthlyRent) + (remainingDays * calculatedDailyRate);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -65,16 +104,36 @@ export async function GET(request: NextRequest) {
 
         const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
-        // Calculate balance using total_rent for custom contracts, monthly_rent otherwise
-        const contractTotal = contract.total_rent || contract.monthly_rent;
+        // Calculate total rent using the same formula
+        const contractTotal = calculateTotalRent(
+          contract.start_date,
+          contract.end_date,
+          contract.monthly_rent,
+          contract.total_rent,
+          room.daily_rate
+        );
         const balance = contractTotal - totalPaid;
+
+        // Calculate payment status
+        let paymentStatus = "unpaid";
+        if (totalPaid >= contractTotal) {
+          paymentStatus = "paid";
+        } else if (totalPaid > 0) {
+          paymentStatus = "partial";
+        }
+
+        // Check if overdue
+        const isOverdue = new Date(contract.end_date) < new Date() && balance > 0;
 
         return {
           ...room,
           current_contract: {
             ...contract,
+            total_rent: contractTotal, // Include calculated total_rent
             total_paid: totalPaid,
             balance: Math.max(0, balance),
+            payment_status: paymentStatus,
+            is_overdue: isOverdue,
           },
         };
       })

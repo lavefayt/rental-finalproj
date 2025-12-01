@@ -2,18 +2,65 @@ import { Room } from "@/types/app.types";
 import { isContractExpired, getDaysUntilDue } from "./dateUtils";
 
 /**
- * Get the daily rate for a room (uses dailyRate if available, falls back to monthly price / 30)
+ * Calculate total rent based on contract dates and monthly rent
+ * Uses full months × monthly rent + remaining days × daily rate
  */
-export function getDailyRate(room: Room): number {
-  return room.dailyRate || Math.round(room.price / 30);
+export function calculateTotalRentFromDates(
+  startDate: string,
+  endDate: string,
+  monthlyRent: number
+): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // Calculate full months
+  let fullMonths =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth());
+
+  // Calculate remaining days after full months
+  const tempDate = new Date(start);
+  tempDate.setMonth(tempDate.getMonth() + fullMonths);
+
+  // If tempDate is past end, we went too far
+  if (tempDate > end) {
+    fullMonths--;
+    tempDate.setMonth(tempDate.getMonth() - 1);
+  }
+
+  // Calculate remaining days
+  const remainingDays = Math.ceil(
+    (end.getTime() - tempDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  // Daily rate is monthly rent / 30
+  const dailyRate = Math.round(monthlyRent / 30);
+
+  // Total rent = full months × monthly rent + remaining days × daily rate
+  const totalRent = fullMonths * monthlyRent + remainingDays * dailyRate;
+
+  return Math.max(totalRent, 0);
 }
 
 /**
- * Get the total rent for a room (uses totalRent if available, falls back to monthly price)
+ * Get the daily rate for a room (monthly price / 30)
+ */
+export function getDailyRate(room: Room): number {
+  return Math.round(room.price / 30);
+}
+
+/**
+ * Get the total rent for a room (calculated from contract dates)
  */
 export function getTotalRent(room: Room): number {
   if (!room.renter) return room.price;
-  return room.renter.totalRent || room.price;
+
+  // Calculate from dates instead of using stored value
+  return calculateTotalRentFromDates(
+    room.renter.rentStartDate,
+    room.renter.contractEndDate,
+    room.price
+  );
 }
 
 /**

@@ -43,6 +43,7 @@ import {
   calculateLateFee,
   getDailyRate,
   getDaysOverdue,
+  getPaymentStatus,
 } from "@/utils/paymentUtils";
 import { ConfirmDialog } from "../ConfirmDialog";
 
@@ -254,13 +255,16 @@ export function TenantsList({
                         ₱{room.renter.amountPaid.toLocaleString()} / ₱
                         {getTotalRent(room).toLocaleString()}
                       </div>
-                      {pastDue ? (
-                        <Badge variant="destructive" className="mt-1">
-                          Unpaid
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-green-600 mt-1">Paid</Badge>
-                      )}
+                      {(() => {
+                        const status = getPaymentStatus(room.renter.amountPaid, getTotalRent(room));
+                        if (status === "paid") {
+                          return <Badge className="bg-green-600 mt-1">Paid</Badge>;
+                        } else if (status === "partial") {
+                          return <Badge className="bg-yellow-500 mt-1">Partial</Badge>;
+                        } else {
+                          return <Badge variant="destructive" className="mt-1">Unpaid</Badge>;
+                        }
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell>

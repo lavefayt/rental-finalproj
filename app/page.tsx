@@ -31,24 +31,29 @@ function transformRoomData(apiRoom: RoomWithCurrentContract): Room {
     const endDate = new Date(apiRoom.current_contract.end_date);
     const diffTime = endDate.getTime() - startDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffMonths = Math.ceil(diffDays / 30);
 
-    // Determine contract type based on duration
+    // Daily rate calculation
+    const dailyRate = apiRoom.daily_rate || Math.round(apiRoom.base_price / 30);
+
+    // Determine contract type and calculate total rent
     if (diffDays === 365 || diffDays === 366) {
+      // Yearly contract
       contractType = "yearly";
       totalRent = apiRoom.base_price * 12;
     } else if (diffDays >= 28 && diffDays <= 31) {
+      // Monthly contract (standard month)
       contractType = "monthly";
       totalRent = apiRoom.base_price;
-    } else if (diffMonths > 1) {
-      contractType = "monthly";
-      totalRent = apiRoom.base_price * diffMonths;
-    } else {
-      // Custom contract (days)
+    } else if (diffDays < 28) {
+      // Custom contract (less than a month) - use daily rate
       contractType = "custom";
-      const dailyRate =
-        apiRoom.daily_rate || Math.round(apiRoom.base_price / 30);
       totalRent = diffDays * dailyRate;
+    } else {
+      // More than one month - calculate full months + remaining days
+      contractType = "custom";
+      const fullMonths = Math.floor(diffDays / 30);
+      const remainingDays = diffDays % 30;
+      totalRent = (fullMonths * apiRoom.base_price) + (remainingDays * dailyRate);
     }
 
     // Use stored total_rent if available (for extended contracts)
