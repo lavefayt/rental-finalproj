@@ -109,7 +109,8 @@ export function OccupiedRoomView({
             Evict Tenant
           </Button>
           <p className="text-xs text-slate-500 mt-2 text-center">
-            Evicting will vacate the room but keep the outstanding balance on record
+            Evicting will vacate the room but keep the outstanding balance on
+            record
           </p>
         </div>
       )}

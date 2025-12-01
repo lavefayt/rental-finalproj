@@ -37,7 +37,13 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Calculate payment status if requested OR if fetching active/completed/evicted contracts
-    if ((paymentStatus || status === "active" || status === "completed" || status === "evicted") && contracts) {
+    if (
+      (paymentStatus ||
+        status === "active" ||
+        status === "completed" ||
+        status === "evicted") &&
+      contracts
+    ) {
       const contractsWithPayments = await Promise.all(
         contracts.map(async (contract) => {
           // Get total paid by querying payments directly
@@ -46,7 +52,8 @@ export async function GET(request: NextRequest) {
             .select("amount")
             .eq("contract_id", contract.id);
 
-          const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+          const totalPaid =
+            payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
           // Calculate balance using total_rent for custom contracts, monthly_rent otherwise
           const totalRent = contract.total_rent || contract.monthly_rent;

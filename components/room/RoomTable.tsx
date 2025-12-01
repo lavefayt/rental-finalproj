@@ -207,7 +207,11 @@ export function RoomTable({
     setConfirmDialog({
       open: true,
       title: "Evict Tenant?",
-      description: `Are you sure you want to evict ${selectedRoom.renter.firstName} ${selectedRoom.renter.lastName} from Room ${selectedRoom.roomNumber}? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
+      description: `Are you sure you want to evict ${
+        selectedRoom.renter.firstName
+      } ${selectedRoom.renter.lastName} from Room ${
+        selectedRoom.roomNumber
+      }? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
       variant: "destructive",
       onConfirm: async () => {
         setIsLoading(true);

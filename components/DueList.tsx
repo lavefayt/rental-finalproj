@@ -259,8 +259,7 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                       <p className="text-xs text-slate-500">
                         {contract.total_paid > 0
                           ? `${Math.round(
-                              (contract.total_paid / totalRent) *
-                                100
+                              (contract.total_paid / totalRent) * 100
                             )}% paid`
                           : "No payment yet"}
                       </p>
@@ -328,7 +327,11 @@ export function DueList({ contracts, onRecordPayment }: DueListProps) {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Total Rent:</span>
                   <span className="font-medium">
-                    ₱{(selectedContract.total_rent || selectedContract.monthly_rent).toLocaleString()}
+                    ₱
+                    {(
+                      selectedContract.total_rent ||
+                      selectedContract.monthly_rent
+                    ).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

@@ -121,13 +121,11 @@ export default function App() {
     autoFetch: true,
   });
   // Get all active contracts for payment form
-  const {
-    contracts: activeContracts,
-    fetchContracts: fetchActiveContracts,
-  } = useContracts({
-    status: "active",
-    autoFetch: true,
-  });
+  const { contracts: activeContracts, fetchContracts: fetchActiveContracts } =
+    useContracts({
+      status: "active",
+      autoFetch: true,
+    });
   const { createContract, updateContract } = useContracts({ autoFetch: false });
   const { payments, fetchPayments, createPayment } = usePayments({
     autoFetch: true,
@@ -175,8 +173,8 @@ export default function App() {
 
   // Record payment directly by contract ID (for payments page and evicted tenants)
   const recordPaymentByContract = async (
-    contractId: string, 
-    amount: number, 
+    contractId: string,
+    amount: number,
     paymentMethod: string = "cash",
     notes?: string
   ) => {
@@ -489,10 +487,14 @@ export default function App() {
             )}
             {isPaymentsView && (
               <AddPaymentDialog
-                contracts={[
-                  ...activeContracts,
-                  ...evictedTenantContracts,
-                ] as unknown as Parameters<typeof AddPaymentDialog>[0]["contracts"]}
+                contracts={
+                  [
+                    ...activeContracts,
+                    ...evictedTenantContracts,
+                  ] as unknown as Parameters<
+                    typeof AddPaymentDialog
+                  >[0]["contracts"]
+                }
                 onSubmit={recordPaymentByContract}
               />
             )}
@@ -619,7 +621,7 @@ export default function App() {
           {/* Evicted Tenants View */}
           {isEvictedTenantsView && (
             <div className="space-y-4">
-              <EvictedTenantsList 
+              <EvictedTenantsList
                 contracts={evictedTenantContracts}
                 onRecordPayment={recordPaymentByContract}
               />

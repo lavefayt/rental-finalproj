@@ -9,7 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, CreditCard, Banknote, Building2, Smartphone } from "lucide-react";
+import {
+  DollarSign,
+  CreditCard,
+  Banknote,
+  Building2,
+  Smartphone,
+} from "lucide-react";
 
 interface Payment {
   id: string;
@@ -116,8 +122,12 @@ export function PaymentsList({ payments }: PaymentsListProps) {
                     {new Date(payment.payment_date).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant={payment.contract?.status === "evicted" ? "destructive" : "outline"}
+                    <Badge
+                      variant={
+                        payment.contract?.status === "evicted"
+                          ? "destructive"
+                          : "outline"
+                      }
                     >
                       {getRoomDisplay(payment)}
                     </Badge>

@@ -173,7 +173,11 @@ export function TenantsList({
     setConfirmDialog({
       open: true,
       title: "Evict Tenant?",
-      description: `Are you sure you want to evict ${room.renter.firstName} ${room.renter.lastName} from Room ${room.roomNumber}? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
+      description: `Are you sure you want to evict ${room.renter.firstName} ${
+        room.renter.lastName
+      } from Room ${
+        room.roomNumber
+      }? The room will become vacant but the outstanding balance of ₱${totalDue.toLocaleString()} will remain on record.`,
       onConfirm: async () => {
         await onEvictTenant(room.id);
         setConfirmDialog({ ...confirmDialog, open: false });

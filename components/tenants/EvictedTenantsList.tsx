@@ -75,7 +75,12 @@ interface EvictedTenantContract {
 
 interface EvictedTenantsListProps {
   contracts: EvictedTenantContract[] | Record<string, unknown>[];
-  onRecordPayment?: (contractId: string, amount: number, paymentMethod?: string, notes?: string) => void;
+  onRecordPayment?: (
+    contractId: string,
+    amount: number,
+    paymentMethod?: string,
+    notes?: string
+  ) => void;
 }
 
 export function EvictedTenantsList({
@@ -132,8 +137,8 @@ export function EvictedTenantsList({
     setIsSubmitting(true);
     try {
       await onRecordPayment(
-        paymentDialogContract.id, 
-        finalAmount, 
+        paymentDialogContract.id,
+        finalAmount,
         paymentMethod,
         paymentNotes || undefined
       );
@@ -151,7 +156,7 @@ export function EvictedTenantsList({
     if (!paymentDialogContract) return;
     const balance = getContractBalance(paymentDialogContract);
     const numValue = parseFloat(value);
-    
+
     if (isNaN(numValue) || numValue < 0) {
       setPaymentAmount("");
     } else if (numValue > balance) {
@@ -462,7 +467,8 @@ export function EvictedTenantsList({
                 Record Payment
               </DialogTitle>
               <DialogDescription>
-                Record payment for {getRenterName(paymentDialogContract)} (Evicted)
+                Record payment for {getRenterName(paymentDialogContract)}{" "}
+                (Evicted)
               </DialogDescription>
             </DialogHeader>
 
@@ -472,7 +478,8 @@ export function EvictedTenantsList({
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-600">Outstanding Balance:</span>
                   <span className="font-semibold text-red-600">
-                    ₱{getContractBalance(paymentDialogContract).toLocaleString()}
+                    ₱
+                    {getContractBalance(paymentDialogContract).toLocaleString()}
                   </span>
                 </div>
                 <Button
@@ -482,7 +489,8 @@ export function EvictedTenantsList({
                   className="w-full mt-2"
                   onClick={handlePayFullBalance}
                 >
-                  Pay Full Balance (₱{getContractBalance(paymentDialogContract).toLocaleString()})
+                  Pay Full Balance (₱
+                  {getContractBalance(paymentDialogContract).toLocaleString()})
                 </Button>
               </div>
 
@@ -497,12 +505,18 @@ export function EvictedTenantsList({
                   step="0.01"
                   value={paymentAmount}
                   onChange={(e) => handlePaymentAmountChange(e.target.value)}
-                  placeholder={`Max: ₱${getContractBalance(paymentDialogContract).toLocaleString()}`}
+                  placeholder={`Max: ₱${getContractBalance(
+                    paymentDialogContract
+                  ).toLocaleString()}`}
                   required
                 />
                 {parseFloat(paymentAmount) > 0 && (
                   <p className="text-xs text-slate-500">
-                    Remaining after payment: ₱{(getContractBalance(paymentDialogContract) - parseFloat(paymentAmount || "0")).toLocaleString()}
+                    Remaining after payment: ₱
+                    {(
+                      getContractBalance(paymentDialogContract) -
+                      parseFloat(paymentAmount || "0")
+                    ).toLocaleString()}
                   </p>
                 )}
               </div>

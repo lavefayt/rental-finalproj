@@ -104,7 +104,11 @@ export async function PATCH(
     }
 
     // If contract is terminated, completed, or evicted, update room status to vacant
-    if (status === "terminated" || status === "completed" || status === "evicted") {
+    if (
+      status === "terminated" ||
+      status === "completed" ||
+      status === "evicted"
+    ) {
       await supabase
         .from("rooms")
         .update({ status: "vacant" })

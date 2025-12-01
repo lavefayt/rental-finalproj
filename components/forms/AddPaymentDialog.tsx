@@ -42,10 +42,18 @@ interface Contract {
 
 interface AddPaymentDialogProps {
   contracts: Contract[];
-  onSubmit: (contractId: string, amount: number, paymentMethod: string, notes?: string) => void;
+  onSubmit: (
+    contractId: string,
+    amount: number,
+    paymentMethod: string,
+    notes?: string
+  ) => void;
 }
 
-export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps) {
+export function AddPaymentDialog({
+  contracts,
+  onSubmit,
+}: AddPaymentDialogProps) {
   const [open, setOpen] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
@@ -54,7 +62,7 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedContract = contracts.find((c) => c.id === selectedContractId);
-  
+
   // Calculate balance for selected contract
   const getBalance = (contract: Contract) => {
     const totalRent = contract.total_rent || contract.monthly_rent;
@@ -87,11 +95,16 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContractId || !amount) return;
-    
+
     setIsSubmitting(true);
     try {
-      await onSubmit(selectedContractId, parseFloat(amount), paymentMethod, notes || undefined);
-      
+      await onSubmit(
+        selectedContractId,
+        parseFloat(amount),
+        paymentMethod,
+        notes || undefined
+      );
+
       // Reset form and close dialog
       setSelectedContractId("");
       setAmount("");
@@ -131,9 +144,7 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
             <DollarSign className="w-5 h-5 text-green-600" />
             Record New Payment
           </DialogTitle>
-          <DialogDescription>
-            Record a payment for a tenant
-          </DialogDescription>
+          <DialogDescription>Record a payment for a tenant</DialogDescription>
         </DialogHeader>
 
         {contractsWithBalance.length === 0 ? (
@@ -160,13 +171,12 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
                           <UserX className="w-3 h-3 text-red-500" />
                         )}
                         <span>
-                          {contract.renter?.name || "Unknown"} 
-                          {contract.room?.room_number 
+                          {contract.renter?.name || "Unknown"}
+                          {contract.room?.room_number
                             ? ` - Room ${contract.room.room_number}`
-                            : contract.status === "evicted" 
-                              ? " (Evicted)"
-                              : ""
-                          }
+                            : contract.status === "evicted"
+                            ? " (Evicted)"
+                            : ""}
                         </span>
                       </div>
                     </SelectItem>
@@ -187,7 +197,11 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
                 <div className="flex justify-between text-sm mt-1">
                   <span className="text-slate-600">Total Rent:</span>
                   <span>
-                    ₱{(selectedContract.total_rent || selectedContract.monthly_rent).toLocaleString()}
+                    ₱
+                    {(
+                      selectedContract.total_rent ||
+                      selectedContract.monthly_rent
+                    ).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -203,7 +217,8 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
                   className="w-full mt-2"
                   onClick={handlePayFullBalance}
                 >
-                  Pay Full Balance (₱{getBalance(selectedContract).toLocaleString()})
+                  Pay Full Balance (₱
+                  {getBalance(selectedContract).toLocaleString()})
                 </Button>
               </div>
             )}
@@ -219,13 +234,18 @@ export function AddPaymentDialog({ contracts, onSubmit }: AddPaymentDialogProps)
                 step="0.01"
                 value={amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
-                placeholder={selectedContract ? `Max: ₱${maxAmount.toLocaleString()}` : "Select a tenant first"}
+                placeholder={
+                  selectedContract
+                    ? `Max: ₱${maxAmount.toLocaleString()}`
+                    : "Select a tenant first"
+                }
                 disabled={!selectedContract}
                 required
               />
               {selectedContract && parseFloat(amount) > 0 && (
                 <p className="text-xs text-slate-500">
-                  Remaining after payment: ₱{(maxAmount - parseFloat(amount || "0")).toLocaleString()}
+                  Remaining after payment: ₱
+                  {(maxAmount - parseFloat(amount || "0")).toLocaleString()}
                 </p>
               )}
             </div>
